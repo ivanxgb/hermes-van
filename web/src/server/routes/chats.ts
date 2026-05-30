@@ -87,6 +87,42 @@ chatRoutes.post("/", csrfRequired, async (c) => {
   return c.json({ chat }, 201);
 });
 
+// ─── Search ─────────────────────────────────────────────────────────────
+// FTS5-backed search across the user's message log. Limited to the
+// authed user via ScopedDb. Optional chatId narrows to one chat.
+//
+// IMPORTANT: this must be registered before any /:id routes — Hono
+// matches in registration order, and "_search" would otherwise be
+// captured as a chat id parameter.
+
+const searchSchema = z.object({
+  q: z.string().min(1).max(500),
+  limit: z.coerce.number().int().min(1).max(200).optional(),
+  chatId: z.string().min(1).max(64).optional(),
+});
+
+chatRoutes.get("/_search", async (c) => {
+  const user = c.get("user");
+  if (!user) return c.json({ error: "Unauthenticated" }, 401);
+
+  const parsed = searchSchema.safeParse({
+    q: c.req.query("q"),
+    limit: c.req.query("limit"),
+    chatId: c.req.query("chatId"),
+  });
+  if (!parsed.success) {
+    return c.json({ error: "Invalid query", issues: parsed.error.issues }, 400);
+  }
+
+  const scoped = forUser(getDb(), user.id);
+  const results = scoped.messages.search(parsed.data.q, {
+    limit: parsed.data.limit,
+    chatId: parsed.data.chatId,
+  });
+
+  return c.json({ results });
+});
+
 // ─── Read one ───────────────────────────────────────────────────────────
 
 const idParam = z.string().min(1).max(64);

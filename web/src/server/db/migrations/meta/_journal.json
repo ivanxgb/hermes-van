@@ -15,6 +15,13 @@
       "when": 1780112937000,
       "tag": "0001_awesome_pepper_potts",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1780116600000,
+      "tag": "0002_fts_messages",
+      "breakpoints": true
     }
   ]
 }

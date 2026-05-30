@@ -352,6 +352,59 @@ export class ScopedDb {
       return q.all();
     },
 
+    /**
+     * Full-text search over the user's message log via the FTS5 mirror
+     * table populated by triggers in migration 0002. Returns up to
+     * `limit` rows ordered by FTS5 rank (most relevant first).
+     *
+     * The query is passed to FTS5 as-is, so the caller can use the full
+     * MATCH grammar (prefix*, "phrase queries", AND/OR, NEAR/N, etc.).
+     * If FTS5 rejects the input as a malformed query (e.g. unbalanced
+     * quotes), we catch the error and return an empty array.
+     */
+    search: (
+      query: string,
+      opts: { limit?: number; chatId?: string } = {},
+    ): Array<Message & { snippet: string }> => {
+      const trimmed = query.trim();
+      if (!trimmed) return [];
+      const limit = Math.min(Math.max(1, opts.limit ?? 50), 200);
+      try {
+        const chatFilter = opts.chatId
+          ? sql`AND m.chat_id = ${opts.chatId}`
+          : sql``;
+        const rows = this.db.all<Record<string, unknown>>(sql`
+          SELECT m.id, m.chat_id, m.user_id, m.role, m.content,
+                 m.run_id, m.status, m.error, m.metadata,
+                 m.created_at, m.updated_at,
+                 snippet(messages_fts, -1, '[[', ']]', '…', 12) AS snippet
+          FROM messages_fts f
+          JOIN messages m ON m.id = f.message_id
+          WHERE messages_fts MATCH ${trimmed}
+            AND m.user_id = ${this.userId}
+            ${chatFilter}
+          ORDER BY rank
+          LIMIT ${limit}
+        `);
+        return rows.map((row) => ({
+          id: String(row["id"]),
+          chatId: String(row["chat_id"]),
+          userId: String(row["user_id"]),
+          role: row["role"] as Message["role"],
+          content: String(row["content"] ?? ""),
+          runId: (row["run_id"] as string | null) ?? null,
+          status: (row["status"] as Message["status"]) ?? "completed",
+          error: (row["error"] as string | null) ?? null,
+          metadata: (row["metadata"] as string | null) ?? null,
+          createdAt: Number(row["created_at"] ?? 0),
+          updatedAt: Number(row["updated_at"] ?? 0),
+          snippet: String(row["snippet"] ?? ""),
+        }));
+      } catch {
+        return [];
+      }
+    },
+
     byId: (id: string): Message | undefined => {
       return this.db
         .select()
