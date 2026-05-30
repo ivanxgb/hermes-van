@@ -154,7 +154,32 @@ export const auth = {
   logout: () => api.post<{ ok: true }>("/auth/logout"),
   logoutAll: () => api.post<{ ok: true; revoked: number }>("/auth/logout-all"),
   me: () => api.get<MeResponse>("/auth/me"),
+  sessions: () => api.get<{ sessions: WebSessionRecord[] }>("/auth/sessions"),
+  revokeSession: (id: string) =>
+    api.post<{ ok: true; alreadyRevoked?: boolean }>(`/auth/sessions/${id}/revoke`),
+  audit: (limit = 100) =>
+    api.get<{ events: AuditRecord[] }>(`/auth/audit?limit=${limit}`),
 };
+
+export interface WebSessionRecord {
+  id: string;
+  createdAt: number;
+  lastSeenAt: number;
+  expiresAt: number;
+  revokedAt: number | null;
+  ip: string | null;
+  userAgent: string | null;
+  isCurrent: boolean;
+}
+
+export interface AuditRecord {
+  id: string;
+  ts: number;
+  event: string;
+  ip: string | null;
+  userAgent: string | null;
+  metadata: Record<string, unknown> | string | null;
+}
 
 export const sys = {
   health: () => api.get<HealthResponse>("/api/health"),

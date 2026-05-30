@@ -572,6 +572,91 @@ authRoutes.get("/me", authRequired, async (c) => {
   });
 });
 
+// ─── Sessions list / individual revoke ─────────────────────────────────
+
+authRoutes.get("/sessions", authRequired, async (c) => {
+  const user = c.get("user");
+  if (!user) return c.json({ error: "Unauthenticated" }, 401);
+
+  const db = getDb();
+  const all = forUser(db, user.id).webSessions.list();
+  // Strip the CSRF token hash before returning — it's a server secret.
+  const sessions = all.map((s) => ({
+    id: s.id,
+    createdAt: s.createdAt,
+    lastSeenAt: s.lastSeenAt,
+    expiresAt: s.expiresAt,
+    revokedAt: s.revokedAt,
+    ip: s.ip,
+    userAgent: s.userAgent,
+    isCurrent: s.id === user.sessionId,
+  }));
+  // Newest first
+  sessions.sort((a, b) => b.createdAt - a.createdAt);
+  return c.json({ sessions });
+});
+
+authRoutes.post("/sessions/:id/revoke", authRequired, csrfRequired, async (c) => {
+  const user = c.get("user");
+  if (!user) return c.json({ error: "Unauthenticated" }, 401);
+
+  const id = c.req.param("id");
+  const db = getDb();
+  const scoped = forUser(db, user.id);
+  const target = scoped.webSessions.byId(id);
+  if (!target) return c.json({ error: "Session not found" }, 404);
+  if (target.revokedAt !== null) {
+    return c.json({ ok: true, alreadyRevoked: true });
+  }
+  scoped.webSessions.revoke(id);
+  emitAudit(db, {
+    userId: user.id,
+    event: "session.revoked",
+    ip: ipOf(c),
+    userAgent: uaOf(c),
+    metadata: { revokedSessionId: id, byCurrentSession: user.sessionId === id },
+  });
+
+  // If the user revoked their own current session, also clear cookies.
+  if (id === user.sessionId) {
+    for (const ck of buildClearCookies(loadEnv())) {
+      c.header("Set-Cookie", ck, { append: true });
+    }
+  }
+  return c.json({ ok: true });
+});
+
+// ─── Audit log ─────────────────────────────────────────────────────────
+
+authRoutes.get("/audit", authRequired, async (c) => {
+  const user = c.get("user");
+  if (!user) return c.json({ error: "Unauthenticated" }, 401);
+
+  const limit = Math.min(Number(c.req.query("limit") ?? 100), 500);
+  const db = getDb();
+  const events = forUser(db, user.id).audit.listForUser({ limit });
+  // Parse metadata JSON strings up-front so the client gets typed objects.
+  const parsed = events.map((e) => {
+    let meta: unknown = null;
+    if (e.metadata) {
+      try {
+        meta = JSON.parse(e.metadata);
+      } catch {
+        meta = e.metadata;
+      }
+    }
+    return {
+      id: e.id,
+      ts: e.ts,
+      event: e.event,
+      ip: e.ip,
+      userAgent: e.userAgent,
+      metadata: meta,
+    };
+  });
+  return c.json({ events: parsed });
+});
+
 // ─── helpers ────────────────────────────────────────────────────────────
 
 function setSessionCookies(c: Context, sessionId: string, csrfToken: string): void {

@@ -1209,3 +1209,40 @@ code {
   border: 1px solid rgba(239, 68, 68, 0.3);
   border-radius: 3px;
 }
+
+/* ── SETTINGS — sessions + audit ───── */
+.section-h {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 28px 0 4px;
+}
+.section-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0 0 14px;
+}
+.audit-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 12px;
+}
+.audit-row {
+  display: grid;
+  grid-template-columns: 200px 100px 1fr;
+  gap: 12px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.audit-row:last-child { border-bottom: none; }
+.audit-event { color: var(--text); }
+.audit-when { color: var(--text-muted); }
+.audit-ip { color: var(--text-dim); }
+@media (max-width: 600px) {
+  .audit-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}
