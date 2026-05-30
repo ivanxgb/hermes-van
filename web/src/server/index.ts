@@ -11,6 +11,7 @@ import { Hono } from "hono";
 import { logger as honoLogger } from "hono/logger";
 import { authRoutes } from "./auth/routes";
 import { chatRoutes } from "./routes/chats";
+import { chatRunRoutes, runRoutes } from "./routes/runs";
 import { authRequired } from "./middleware";
 import { securityHeaders } from "./middleware";
 import { loadEnv } from "./lib/env";
@@ -61,6 +62,12 @@ app.route("/auth", authRoutes);
 
 // /api/chats/* — REST surface for chat CRUD (auth required)
 app.route("/api/chats", chatRoutes);
+
+// /api/chats/:id/runs — start a new run for a chat
+app.route("/api/chats/:id/runs", chatRunRoutes);
+
+// /api/runs/:runId/* — SSE events, stop, approval
+app.route("/api/runs", runRoutes);
 
 // /api/me convenience proxy: requires auth
 app.get("/api/me", authRequired, async (c) => {
