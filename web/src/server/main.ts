@@ -34,11 +34,19 @@ app.use("/favicon.ico", serveStatic({ path: "./public/favicon.ico" }));
 // that's acceptable for API-only deployments.
 if (existsSync("./dist")) {
   app.use("/assets/*", serveStatic({ root: "./dist" }));
-  // SPA fallback: anything that's not /api/* or /auth/* falls back to
-  // index.html so client-side routing works on hard reload.
+  // SPA fallback: anything that's not /api/*, /auth/*, or /assets/*
+  // falls back to index.html so client-side routing works on hard
+  // reload. /assets/* is explicitly excluded so missing assets 404
+  // cleanly instead of serving the SPA shell with a wrong content-type.
   app.use("*", async (c, next) => {
     const path = new URL(c.req.url).pathname;
-    if (path.startsWith("/api/") || path.startsWith("/auth/")) return next();
+    if (
+      path.startsWith("/api/") ||
+      path.startsWith("/auth/") ||
+      path.startsWith("/assets/")
+    ) {
+      return next();
+    }
     return serveStatic({ path: "./dist/index.html" })(c, next);
   });
 }

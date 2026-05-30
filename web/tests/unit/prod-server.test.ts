@@ -100,6 +100,27 @@ test.runIf(HAS_ENV)(
       // 4. Unknown /api/* — 404, NOT served as SPA fallback.
       const unknownApi = await fetch(`http://127.0.0.1:${port}/api/does-not-exist`);
       expect(unknownApi.status).toBe(404);
+
+      // 5. SPA fallback (only when dist/ exists, i.e. after pnpm build).
+      //    Hard reload of /chat must serve the SPA shell, not a 404.
+      //    Missing assets must 404 instead of serving HTML (which would
+      //    break browsers expecting CSS/JS content-type).
+      const hasDist = existsSync("./dist/index.html");
+      if (hasDist) {
+        const spa = await fetch(`http://127.0.0.1:${port}/chat`);
+        expect(spa.status, "SPA route should fall back to index.html").toBe(200);
+        expect(spa.headers.get("content-type") ?? "").toMatch(/text\/html/);
+        const spaBody = await spa.text();
+        expect(spaBody.toLowerCase()).toContain("<!doctype html");
+
+        // Asset that doesn't exist must 404, not be swallowed by the
+        // SPA fallback (regression on /assets/* exclusion).
+        const missing = await fetch(`http://127.0.0.1:${port}/assets/does-not-exist.css`);
+        expect(
+          missing.status,
+          "missing /assets/* must 404, not return SPA shell",
+        ).toBe(404);
+      }
     } finally {
       await killAndWait(proc);
     }
