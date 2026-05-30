@@ -10,6 +10,7 @@ import "dotenv/config";
 import { Hono } from "hono";
 import { logger as honoLogger } from "hono/logger";
 import { authRoutes } from "./auth/routes";
+import { chatRoutes } from "./routes/chats";
 import { authRequired } from "./middleware";
 import { securityHeaders } from "./middleware";
 import { loadEnv } from "./lib/env";
@@ -57,6 +58,9 @@ app.get("/api/health", async (c) => {
 
 // /auth/* mounts via subapp
 app.route("/auth", authRoutes);
+
+// /api/chats/* — REST surface for chat CRUD (auth required)
+app.route("/api/chats", chatRoutes);
 
 // /api/me convenience proxy: requires auth
 app.get("/api/me", authRequired, async (c) => {
