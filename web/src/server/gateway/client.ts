@@ -97,6 +97,39 @@ export async function listToolsets(): Promise<Array<Record<string, unknown>>> {
   return parsed.data ?? [];
 }
 
+/** GET /api/jobs — list cron jobs. */
+export async function listJobs(): Promise<Array<Record<string, unknown>>> {
+  const env = loadEnv();
+  const res = await fetch(`${env.HERMES_VAN_GATEWAY_URL}/api/jobs`, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${env.HERMES_VAN_GATEWAY_KEY}` },
+  });
+  const text = await res.text();
+  if (!res.ok) throw new GatewayError(res.status, text);
+  const parsed = JSON.parse(text) as { jobs?: Array<Record<string, unknown>> };
+  return parsed.jobs ?? [];
+}
+
+/** POST /api/sessions/{id}/fork — branch a session, returns new session info. */
+export async function forkSession(
+  upstreamSessionId: string,
+): Promise<Record<string, unknown>> {
+  const env = loadEnv();
+  const res = await fetch(
+    `${env.HERMES_VAN_GATEWAY_URL}/api/sessions/${upstreamSessionId}/fork`,
+    {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({}),
+    },
+  );
+  const text = await res.text();
+  if (!res.ok) throw new GatewayError(res.status, text);
+  const parsed = JSON.parse(text) as { session?: Record<string, unknown> };
+  if (!parsed.session) throw new GatewayError(res.status, "missing session in fork response");
+  return parsed.session;
+}
+
 /** POST /v1/runs/{run_id}/stop */
 export async function stopRun(upstreamRunId: string): Promise<void> {
   const env = loadEnv();

@@ -52,6 +52,8 @@ const SLASH_COMMANDS = [
   { name: "/model", desc: "Change model for the current chat (TODO)" },
   { name: "/settings", desc: "Open settings" },
   { name: "/capabilities", desc: "Browse skills and toolsets" },
+  { name: "/jobs", desc: "Browse scheduled cron jobs" },
+  { name: "/fork", desc: "Fork the current chat" },
   { name: "/logout", desc: "Sign out" },
 ];
 

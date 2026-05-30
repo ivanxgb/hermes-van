@@ -1048,3 +1048,27 @@ code {
   padding: 12px;
   margin-top: 16px;
 }
+
+/* ─── Jobs page ──────────────────────────────────────────────────────── */
+.job-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 8px;
+}
+.job-meta strong {
+  color: var(--fg);
+  font-weight: 500;
+  margin-right: 4px;
+}
+.job-error {
+  margin-top: 8px;
+  padding: 6px 8px;
+  font-size: 12px;
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 3px;
+}

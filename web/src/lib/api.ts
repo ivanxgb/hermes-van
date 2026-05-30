@@ -253,7 +253,29 @@ export interface ToolsetRecord {
   tools?: string[];
 }
 
+export interface JobRecord {
+  id: string;
+  name?: string | null;
+  prompt_preview?: string | null;
+  schedule_display?: string | null;
+  enabled?: boolean;
+  state?: string | null;
+  next_run_at?: string | null;
+  last_run_at?: string | null;
+  last_status?: string | null;
+  last_error?: string | null;
+  enabled_toolsets?: string[];
+  skills?: string[];
+  deliver?: string | null;
+  origin?: { platform?: string; chat_name?: string; chat_id?: string } | null;
+}
+
 export const gateway = {
   skills: () => api.get<{ skills: SkillRecord[] }>("/api/gateway/skills"),
   toolsets: () => api.get<{ toolsets: ToolsetRecord[] }>("/api/gateway/toolsets"),
+  jobs: () => api.get<{ jobs: JobRecord[] }>("/api/gateway/jobs"),
+  forkChat: (chatId: string) =>
+    api.post<{ chat: Chat; upstreamSession: Record<string, unknown> }>(
+      `/api/gateway/chats/${chatId}/fork`,
+    ),
 };

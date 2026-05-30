@@ -11,6 +11,7 @@ import { useLocation } from "wouter";
 import {
   chats as chatsApi,
   runs as runsApi,
+  gateway as gatewayApi,
   type Chat,
 } from "../lib/api";
 import { logout, useAuth } from "../lib/auth-store";
@@ -164,6 +165,17 @@ export function ChatPage() {
     }
   }
 
+  async function onForkChat(id: string) {
+    setError(null);
+    try {
+      const { chat } = await gatewayApi.forkChat(id);
+      setChatList((prev) => [chat, ...prev]);
+      setSelectedId(chat.id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Fork failed");
+    }
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedId || !input.trim()) return;
@@ -286,6 +298,14 @@ export function ChatPage() {
           >
             capabilities
           </button>
+          <button
+            className="btn-text"
+            type="button"
+            onClick={() => setLocation("/jobs")}
+            data-testid="nav-jobs"
+          >
+            jobs
+          </button>
           <button className="btn-text" type="button" onClick={() => setLocation("/settings")}>
             settings
           </button>
@@ -318,6 +338,15 @@ export function ChatPage() {
                     stop
                   </button>
                 ) : null}
+                <button
+                  className="btn-text"
+                  type="button"
+                  onClick={() => void onForkChat(selectedChat.id)}
+                  data-testid="fork-btn"
+                  title="Branch this chat — creates a new session pointing at the same upstream history"
+                >
+                  fork
+                </button>
                 <a
                   className="btn-text"
                   href={`/api/chats/${selectedChat.id}/export.md`}
@@ -446,6 +475,10 @@ export function ChatPage() {
           if (slash === "/new") void onNewChat();
           else if (slash === "/settings") setLocation("/settings");
           else if (slash === "/capabilities") setLocation("/capabilities");
+          else if (slash === "/jobs") setLocation("/jobs");
+          else if (slash === "/fork") {
+            if (selectedId) void onForkChat(selectedId);
+          }
           else if (slash === "/logout") void onLogout();
           else if (slash === "/help") {
             alert(
