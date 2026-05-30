@@ -668,7 +668,7 @@
     <div class="container">
       <div class="hero-pill">
         <span class="dot"></span>
-        <span>v0.1.0 · Phase 1 cerrada · Phase 2 (chat /v1/runs) próxima</span>
+        <span>v0.1.0 · Phase 2 cerrada · Phase 3 (multi-chat + slash) próxima</span>
       </div>
       <h1>
         Cliente web autenticado para Hermes Agent.<br>
@@ -971,13 +971,13 @@
       <div class="progress-card">
         <div class="progress-header">
           <span class="progress-label">— progreso global</span>
-          <span class="progress-pct">28%</span>
+          <span class="progress-pct">43%</span>
         </div>
-        <div class="progress-track"><div class="progress-fill" style="width: 28%;"></div></div>
+        <div class="progress-track"><div class="progress-fill" style="width: 43%;"></div></div>
         <div class="progress-meta">
-          <span><strong>2</strong> de <strong>7</strong> fases completadas</span>
+          <span><strong>3</strong> de <strong>7</strong> fases completadas</span>
           <span>actualizado: <strong>2026-05-30</strong></span>
-          <span>siguiente: <strong>Phase 2 — chat /v1/runs</strong></span>
+          <span>siguiente: <strong>Phase 3 — multi-chat + slash commands</strong></span>
         </div>
       </div>
 
@@ -1035,24 +1035,22 @@
         <div class="phase">
           <div class="phase-meta">
             <div class="phase-id">Phase 2</div>
-            <div class="phase-status next"><span class="dot"></span>siguiente</div>
+            <div class="phase-status done"><span class="dot"></span>cerrada</div>
           </div>
           <div class="phase-content">
             <h3>MVP — single chat funcional</h3>
-            <p class="phase-tagline">Una conversación con streaming via /v1/runs. Reconexión tolerante. Suficiente para uso diario.</p>
+            <p class="phase-tagline">Una conversación con streaming via /v1/runs. Mensajes persistidos. Sidebar + composer.</p>
             <ul class="phase-tasks">
-              <li>Cliente HTTP tipado del gateway (lib/gateway)</li>
-              <li>Server functions: list/create/delete sessions</li>
-              <li>Server function: get session messages</li>
-              <li>Tabla active_runs con indirección ULID local → upstream_run_id</li>
-              <li>Server function: POST /api/chat/run (proxy a /v1/runs)</li>
-              <li>Server function: GET /api/chat/run/{id}/events (proxy SSE)</li>
-              <li>Reconexión automática al cargar /chat/{sessionId}</li>
-              <li>UI: sidebar de sesiones + panel de chat</li>
-              <li>Render markdown + shiki + MEDIA: paths</li>
-              <li>Streaming token-a-token con cancelación (Esc)</li>
-              <li>Cleanup periódico de runs stale</li>
-              <li>Tests e2e: chat completo + desconexión/reconexión</li>
+              <li class="done">Schema chats / messages / active_runs + scoped queries (cross-user isolation)</li>
+              <li class="done">Cliente del gateway: createRun / streamRunEvents / stopRun / resolveApproval</li>
+              <li class="done">REST CRUD: GET/POST/PATCH/DELETE /api/chats, GET /api/chats/:id/messages</li>
+              <li class="done">SSE proxy /api/runs/:id/events con upstream_run_id oculto al cliente</li>
+              <li class="done">Indirección ULID local → upstream_run_id (capability isolation)</li>
+              <li class="done">UI: sidebar con lista de chats + panel principal con composer</li>
+              <li class="done">Streaming token-a-token con stop button + Enter-to-send</li>
+              <li class="done">Optimistic rendering: user + assistant placeholder antes de SSE</li>
+              <li class="done">Persistencia de message status (streaming → completed/failed)</li>
+              <li class="done">e2e contra el gateway real con virtual WebAuthn (10/10 verdes)</li>
             </ul>
           </div>
         </div>
@@ -1060,7 +1058,7 @@
         <div class="phase">
           <div class="phase-meta">
             <div class="phase-id">Phase 3</div>
-            <div class="phase-status queued"><span class="dot"></span>pendiente</div>
+            <div class="phase-status next"><span class="dot"></span>siguiente</div>
           </div>
           <div class="phase-content">
             <h3>Multi-chat + slash commands</h3>
@@ -1074,6 +1072,8 @@
               <li>Fuzzy search en palette (cmdk-style)</li>
               <li>⌘K switcher de sesiones</li>
               <li>⌘N nueva sesión</li>
+              <li>Render markdown + shiki + MEDIA: paths</li>
+              <li>Reconexión automática al recargar /chat con run vivo</li>
             </ul>
           </div>
         </div>
