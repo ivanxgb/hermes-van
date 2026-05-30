@@ -14,19 +14,19 @@ import type { Env } from "../lib/env";
 
 const env: Env = {
   NODE_ENV: "development",
-  HERMES_API_URL: "http://127.0.0.1:8765",
-  HERMES_API_KEY: "x".repeat(40),
-  HERMES_WEB_DB_PATH: "./data/x.db",
-  HERMES_WEB_DB_KEY: "a".repeat(64),
-  HERMES_WEB_SESSION_SECRET: "b".repeat(64),
-  HERMES_WEB_RP_ID: "localhost",
-  HERMES_WEB_RP_ORIGIN: "http://localhost:3015",
-  HERMES_WEB_RP_NAME: "test",
-  HERMES_WEB_PORT: 3015,
-  HERMES_WEB_HOST: "127.0.0.1",
-  HERMES_WEB_LOG_LEVEL: "info",
+  HERMES_VAN_GATEWAY_URL: "http://127.0.0.1:8765",
+  HERMES_VAN_GATEWAY_KEY: "x".repeat(40),
+  HERMES_VAN_DB_PATH: "./data/x.db",
+  HERMES_VAN_DB_KEY: "a".repeat(64),
+  HERMES_VAN_SESSION_SECRET: "b".repeat(64),
+  HERMES_VAN_RP_ID: "localhost",
+  HERMES_VAN_RP_ORIGIN: "http://localhost:3015",
+  HERMES_VAN_RP_NAME: "test",
+  HERMES_VAN_PORT: 3015,
+  HERMES_VAN_HOST: "127.0.0.1",
+  HERMES_VAN_LOG_LEVEL: "info",
 };
-const SECRET = env.HERMES_WEB_SESSION_SECRET;
+const SECRET = env.HERMES_VAN_SESSION_SECRET;
 
 describe("session sign/parse", () => {
   it("signs and parses a session id round-trip", () => {

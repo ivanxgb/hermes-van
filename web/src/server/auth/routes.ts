@@ -256,7 +256,7 @@ authRoutes.post(
 
     // Auto-login: create session, set cookies
     const { sessionId, csrfToken } = newSessionTokens();
-    const csrfHash = hashCsrfToken(csrfToken, env.HERMES_WEB_SESSION_SECRET);
+    const csrfHash = hashCsrfToken(csrfToken, env.HERMES_VAN_SESSION_SECRET);
     forUser(db, userId).webSessions.insert({
       id: sessionId,
       expiresAt: Date.now() + ABSOLUTE_TIMEOUT_MS,
@@ -417,7 +417,7 @@ authRoutes.post(
 
     // Create session
     const { sessionId, csrfToken } = newSessionTokens();
-    const csrfHash = hashCsrfToken(csrfToken, env.HERMES_WEB_SESSION_SECRET);
+    const csrfHash = hashCsrfToken(csrfToken, env.HERMES_VAN_SESSION_SECRET);
     forUser(db, user.id).webSessions.insert({
       id: sessionId,
       expiresAt: Date.now() + ABSOLUTE_TIMEOUT_MS,
@@ -493,7 +493,7 @@ authRoutes.post(
 
     // Issue session
     const { sessionId, csrfToken } = newSessionTokens();
-    const csrfHash = hashCsrfToken(csrfToken, env.HERMES_WEB_SESSION_SECRET);
+    const csrfHash = hashCsrfToken(csrfToken, env.HERMES_VAN_SESSION_SECRET);
     forUser(db, user.id).webSessions.insert({
       id: sessionId,
       expiresAt: Date.now() + ABSOLUTE_TIMEOUT_MS,
@@ -568,7 +568,7 @@ authRoutes.get("/me", authRequired, async (c) => {
     username: user.username,
     sessionId: user.sessionId,
     csrfToken: cookieValue ?? null,
-    rpId: env.HERMES_WEB_RP_ID,
+    rpId: env.HERMES_VAN_RP_ID,
   });
 });
 
@@ -576,7 +576,7 @@ authRoutes.get("/me", authRequired, async (c) => {
 
 function setSessionCookies(c: Context, sessionId: string, csrfToken: string): void {
   const env = loadEnv();
-  const signed = signSessionId(sessionId, env.HERMES_WEB_SESSION_SECRET);
+  const signed = signSessionId(sessionId, env.HERMES_VAN_SESSION_SECRET);
   c.header("Set-Cookie", buildSessionCookie(signed, env), { append: true });
   c.header("Set-Cookie", buildCsrfCookie(csrfToken, env), { append: true });
 }

@@ -17,25 +17,25 @@ SESSION_SECRET=$(openssl rand -hex 32)
 
 # Write .env (chmod 0600). Note: prefer HV_* prefixed vars in
 # environments where the host already exports HERMES_* vars (Hermes
-# Agent runtime). Without renaming, the host's HERMES_API_KEY etc.
+# Agent runtime). Without renaming, the host's HERMES_VAN_GATEWAY_KEY etc.
 # will override values from .env when sourced into the same shell.
 cat > .env <<EOF
 NODE_ENV=production
-HERMES_API_URL=http://127.0.0.1:8765
-HERMES_API_KEY=<paste from ~/.hermes/config.yaml gateway.platforms.api_server.key>
-HERMES_WEB_DB_PATH=/var/lib/hermes-van/hermes-van.db
-HERMES_WEB_DB_KEY=$DB_KEY
-HERMES_WEB_SESSION_SECRET=$SESSION_SECRET
-HERMES_WEB_RP_ID=hermes.vintek.io
-HERMES_WEB_RP_ORIGIN=https://hermes.vintek.io
-HERMES_WEB_RP_NAME=hermes-van
-HERMES_WEB_PORT=3015
-HERMES_WEB_HOST=127.0.0.1
-HERMES_WEB_LOG_LEVEL=info
+HERMES_VAN_GATEWAY_URL=http://127.0.0.1:8765
+HERMES_VAN_GATEWAY_KEY=<paste from ~/.hermes/config.yaml gateway.platforms.api_server.key>
+HERMES_VAN_DB_PATH=/var/lib/hermes-van/hermes-van.db
+HERMES_VAN_DB_KEY=$DB_KEY
+HERMES_VAN_SESSION_SECRET=$SESSION_SECRET
+HERMES_VAN_RP_ID=hermes.vintek.io
+HERMES_VAN_RP_ORIGIN=https://hermes.vintek.io
+HERMES_VAN_RP_NAME=hermes-van
+HERMES_VAN_PORT=3015
+HERMES_VAN_HOST=127.0.0.1
+HERMES_VAN_LOG_LEVEL=info
 EOF
 chmod 600 .env
 
-# Apply migrations (runs against HERMES_WEB_DB_PATH)
+# Apply migrations (runs against HERMES_VAN_DB_PATH)
 node --env-file=.env node_modules/.bin/tsx scripts/migrate.ts
 
 # Build
@@ -101,33 +101,33 @@ node --env-file=.env node_modules/.bin/tsx scripts/bootstrap.ts --hours 1
 
 ## Rotation
 
-### Rotate `HERMES_API_KEY` (gateway key)
+### Rotate `HERMES_VAN_GATEWAY_KEY` (gateway key)
 
 1. Update `gateway.platforms.api_server.key` in `~/.hermes/config.yaml`.
 2. `hermes gateway restart` (or however your gateway restarts).
-3. Update `HERMES_API_KEY` in hermes-van's `.env`.
+3. Update `HERMES_VAN_GATEWAY_KEY` in hermes-van's `.env`.
 4. `systemctl --user restart hermes-van`.
 5. Verify `/api/health` returns `gateway.ok = true`.
 
-### Rotate `HERMES_WEB_SESSION_SECRET`
+### Rotate `HERMES_VAN_SESSION_SECRET`
 
 Rotating session secret invalidates ALL active sessions (every user must re-auth).
 
 ```bash
 NEW_SECRET=$(openssl rand -hex 32)
-sed -i "s/^HERMES_WEB_SESSION_SECRET=.*/HERMES_WEB_SESSION_SECRET=$NEW_SECRET/" .env
+sed -i "s/^HERMES_VAN_SESSION_SECRET=.*/HERMES_VAN_SESSION_SECRET=$NEW_SECRET/" .env
 systemctl --user restart hermes-van
 ```
 
-### Rotate `HERMES_WEB_DB_KEY` (SQLCipher master key)
+### Rotate `HERMES_VAN_DB_KEY` (SQLCipher master key)
 
 Requires a key migration: dump → re-encrypt → restore.
 
 ```bash
 systemctl --user stop hermes-van
-OLD_KEY=$(grep HERMES_WEB_DB_KEY .env | cut -d= -f2)
+OLD_KEY=$(grep HERMES_VAN_DB_KEY .env | cut -d= -f2)
 NEW_KEY=$(openssl rand -hex 32)
-DB_PATH=$(grep HERMES_WEB_DB_PATH .env | cut -d= -f2)
+DB_PATH=$(grep HERMES_VAN_DB_PATH .env | cut -d= -f2)
 
 # Use sqlite3 with SQLCipher CLI (or write a tiny migration script).
 # Pseudo:
@@ -144,7 +144,7 @@ require('fs').renameSync('$DB_PATH', '$DB_PATH.bak.\$(date +%s)');
 require('fs').renameSync('$DB_PATH.new', '$DB_PATH');
 "
 
-sed -i "s/^HERMES_WEB_DB_KEY=.*/HERMES_WEB_DB_KEY=$NEW_KEY/" .env
+sed -i "s/^HERMES_VAN_DB_KEY=.*/HERMES_VAN_DB_KEY=$NEW_KEY/" .env
 systemctl --user start hermes-van
 ```
 
@@ -158,7 +158,7 @@ file for at least 7 days before deleting.
 ```bash
 # Hot backup via SQLite's online backup API (requires brief lock).
 DB_PATH=/var/lib/hermes-van/hermes-van.db
-DB_KEY=$(grep HERMES_WEB_DB_KEY ~/projects/hermes-van/web/.env | cut -d= -f2)
+DB_KEY=$(grep HERMES_VAN_DB_KEY ~/projects/hermes-van/web/.env | cut -d= -f2)
 DEST=/var/backups/hermes-van/$(date +%F).db
 
 mkdir -p $(dirname $DEST)
@@ -196,7 +196,7 @@ To revoke server-side:
 
 ```bash
 DB_PATH=/var/lib/hermes-van/hermes-van.db
-DB_KEY=$(grep HERMES_WEB_DB_KEY ~/projects/hermes-van/web/.env | cut -d= -f2)
+DB_KEY=$(grep HERMES_VAN_DB_KEY ~/projects/hermes-van/web/.env | cut -d= -f2)
 
 node -e "
 const Db = require('better-sqlite3-multiple-ciphers');
@@ -239,7 +239,7 @@ db.close();
 
 1. Stop the service: `systemctl --user stop hermes-van`.
 2. Snapshot the DB file forensically (`cp -a` to a separate location).
-3. Rotate `HERMES_WEB_DB_KEY` (above).
+3. Rotate `HERMES_VAN_DB_KEY` (above).
 4. Re-issue recovery codes for every user (delete from recovery_codes,
    force users to regenerate via /settings — Phase 3 feature).
 5. Consider revoking all passkeys and forcing re-registration.

@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=22.0.0" },
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -16,8 +18,8 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "node --env-file=.env node_modules/.bin/tsx scripts/migrate.ts",
-    "hermes-van:bootstrap": "node --env-file=.env node_modules/.bin/tsx scripts/bootstrap.ts"
+    "db:migrate": "node --env-file=.env --import tsx scripts/migrate.ts",
+    "hermes-van:bootstrap": "node --env-file=.env --import tsx scripts/bootstrap.ts"
   },
   "dependencies": {
     "@hono/node-server": "^1.13.7",
@@ -46,6 +48,7 @@
     "@types/react-dom": "^19.0.3",
     "@vitejs/plugin-react": "^4.3.4",
     "@vitest/coverage-v8": "^2.1.8",
+    "dotenv": "^17.4.2",
     "drizzle-kit": "^0.29.1",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",

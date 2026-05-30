@@ -8,7 +8,7 @@
  *
  * Usage:
  *   import { env } from "~/server/lib/env";
- *   env.HERMES_API_URL  // typed string
+ *   env.HERMES_VAN_GATEWAY_URL  // typed string
  */
 import { z } from "zod";
 
@@ -19,31 +19,31 @@ const schema = z
     NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
 
     // Hermes gateway
-    HERMES_API_URL: z.string().url().default("http://127.0.0.1:8765"),
-    HERMES_API_KEY: z.string().min(16, "HERMES_API_KEY must be at least 16 chars"),
+    HERMES_VAN_GATEWAY_URL: z.string().url().default("http://127.0.0.1:8765"),
+    HERMES_VAN_GATEWAY_KEY: z.string().min(16, "HERMES_VAN_GATEWAY_KEY must be at least 16 chars"),
 
     // Local DB
-    HERMES_WEB_DB_PATH: z.string().min(1).default("./data/hermes-van.db"),
-    HERMES_WEB_DB_KEY: z
+    HERMES_VAN_DB_PATH: z.string().min(1).default("./data/hermes-van.db"),
+    HERMES_VAN_DB_KEY: z
       .string()
-      .regex(HEX_32, "HERMES_WEB_DB_KEY must be 32 bytes hex (64 chars)"),
+      .regex(HEX_32, "HERMES_VAN_DB_KEY must be 32 bytes hex (64 chars)"),
 
     // Session signing
-    HERMES_WEB_SESSION_SECRET: z
+    HERMES_VAN_SESSION_SECRET: z
       .string()
-      .regex(HEX_32, "HERMES_WEB_SESSION_SECRET must be 32 bytes hex (64 chars)"),
+      .regex(HEX_32, "HERMES_VAN_SESSION_SECRET must be 32 bytes hex (64 chars)"),
 
     // WebAuthn relying party
-    HERMES_WEB_RP_ID: z.string().min(1).default("localhost"),
-    HERMES_WEB_RP_ORIGIN: z.string().url().default("http://localhost:3015"),
-    HERMES_WEB_RP_NAME: z.string().min(1).default("hermes-van"),
+    HERMES_VAN_RP_ID: z.string().min(1).default("localhost"),
+    HERMES_VAN_RP_ORIGIN: z.string().url().default("http://localhost:3015"),
+    HERMES_VAN_RP_NAME: z.string().min(1).default("hermes-van"),
 
     // Bind
-    HERMES_WEB_PORT: z.coerce.number().int().min(1).max(65535).default(3015),
-    HERMES_WEB_HOST: z.string().min(1).default("127.0.0.1"),
+    HERMES_VAN_PORT: z.coerce.number().int().min(1).max(65535).default(3015),
+    HERMES_VAN_HOST: z.string().min(1).default("127.0.0.1"),
 
     // Logging
-    HERMES_WEB_LOG_LEVEL: z
+    HERMES_VAN_LOG_LEVEL: z
       .enum(["fatal", "error", "warn", "info", "debug", "trace"])
       .default("info"),
   })
@@ -55,24 +55,24 @@ const schema = z
         "0".repeat(64),
         "f".repeat(64),
       ];
-      if (placeholders.includes(data.HERMES_WEB_DB_KEY.toLowerCase())) {
+      if (placeholders.includes(data.HERMES_VAN_DB_KEY.toLowerCase())) {
         ctx.addIssue({
           code: "custom",
-          path: ["HERMES_WEB_DB_KEY"],
+          path: ["HERMES_VAN_DB_KEY"],
           message: "Cannot use placeholder DB key in production",
         });
       }
-      if (placeholders.includes(data.HERMES_WEB_SESSION_SECRET.toLowerCase())) {
+      if (placeholders.includes(data.HERMES_VAN_SESSION_SECRET.toLowerCase())) {
         ctx.addIssue({
           code: "custom",
-          path: ["HERMES_WEB_SESSION_SECRET"],
+          path: ["HERMES_VAN_SESSION_SECRET"],
           message: "Cannot use placeholder session secret in production",
         });
       }
-      if (data.HERMES_WEB_RP_ORIGIN.startsWith("http://") && !data.HERMES_WEB_RP_ORIGIN.includes("localhost")) {
+      if (data.HERMES_VAN_RP_ORIGIN.startsWith("http://") && !data.HERMES_VAN_RP_ORIGIN.includes("localhost")) {
         ctx.addIssue({
           code: "custom",
-          path: ["HERMES_WEB_RP_ORIGIN"],
+          path: ["HERMES_VAN_RP_ORIGIN"],
           message: "Production RP_ORIGIN must use HTTPS",
         });
       }
@@ -107,7 +107,7 @@ export function _resetEnvCache(): void {
 }
 
 /**
- * Lazy proxy. Calling `env.HERMES_API_URL` triggers validation on first
+ * Lazy proxy. Calling `env.HERMES_VAN_GATEWAY_URL` triggers validation on first
  * access — convenient for code paths that don't import this at boot.
  */
 export const env = new Proxy({} as Env, {

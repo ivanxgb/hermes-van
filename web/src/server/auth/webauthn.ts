@@ -87,8 +87,8 @@ export async function buildRegistrationOptions(
   // simplewebauthn v11 requires Uint8Array userIDs.
   const webauthnUserId = ulid();
   const opts: GenerateRegistrationOptionsOpts = {
-    rpName: env.HERMES_WEB_RP_NAME,
-    rpID: env.HERMES_WEB_RP_ID,
+    rpName: env.HERMES_VAN_RP_NAME,
+    rpID: env.HERMES_VAN_RP_ID,
     userName: user.username,
     userDisplayName: user.displayName,
     userID: new TextEncoder().encode(webauthnUserId),
@@ -122,8 +122,8 @@ export async function verifyRegistration({
   const opts: VerifyRegistrationResponseOpts = {
     response,
     expectedChallenge,
-    expectedOrigin: env.HERMES_WEB_RP_ORIGIN,
-    expectedRPID: env.HERMES_WEB_RP_ID,
+    expectedOrigin: env.HERMES_VAN_RP_ORIGIN,
+    expectedRPID: env.HERMES_VAN_RP_ID,
     requireUserVerification: true,
   };
   return verifyRegistrationResponse(opts);
@@ -136,7 +136,7 @@ export async function buildAuthenticationOptions(
   allowCredentialIds: string[] = [],
 ) {
   const opts: GenerateAuthenticationOptionsOpts = {
-    rpID: env.HERMES_WEB_RP_ID,
+    rpID: env.HERMES_VAN_RP_ID,
     timeout: 60_000,
     userVerification: "required",
     allowCredentials: allowCredentialIds.map((id) => ({
@@ -168,8 +168,8 @@ export async function verifyAuthentication({
   const opts: VerifyAuthenticationResponseOpts = {
     response,
     expectedChallenge,
-    expectedOrigin: env.HERMES_WEB_RP_ORIGIN,
-    expectedRPID: env.HERMES_WEB_RP_ID,
+    expectedOrigin: env.HERMES_VAN_RP_ORIGIN,
+    expectedRPID: env.HERMES_VAN_RP_ID,
     credential: {
       id: credential.id,
       publicKey: base64UrlToBuffer(credential.publicKey),

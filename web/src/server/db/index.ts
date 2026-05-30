@@ -3,7 +3,7 @@
  *
  * Single SQLCipher-backed SQLite file. Connection is created lazily and
  * cached. PRAGMAs:
- *   - key=<HERMES_WEB_DB_KEY>  : SQLCipher master key
+ *   - key=<HERMES_VAN_DB_KEY>  : SQLCipher master key
  *   - cipher_compatibility=4    : SQLCipher v4 format
  *   - journal_mode=WAL          : concurrent readers
  *   - foreign_keys=ON           : enforce FK cascades
@@ -41,7 +41,7 @@ function open(path: string, key: string): Database.Database {
   } catch (err) {
     sqlite.close();
     throw new Error(
-      `Failed to open encrypted DB. Likely wrong HERMES_WEB_DB_KEY. ` +
+      `Failed to open encrypted DB. Likely wrong HERMES_VAN_DB_KEY. ` +
         `(underlying: ${(err as Error).message})`,
     );
   }
@@ -59,7 +59,7 @@ function open(path: string, key: string): Database.Database {
 export function getDb() {
   if (_db) return _db;
   const env = loadEnv();
-  _raw = open(env.HERMES_WEB_DB_PATH, env.HERMES_WEB_DB_KEY);
+  _raw = open(env.HERMES_VAN_DB_PATH, env.HERMES_VAN_DB_KEY);
   _db = drizzle(_raw, { schema });
   return _db;
 }

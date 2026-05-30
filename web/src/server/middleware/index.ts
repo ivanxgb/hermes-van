@@ -52,7 +52,7 @@ export const authRequired: MiddlewareHandler = async (c, next) => {
   if (!cookieValue) {
     return c.json({ error: "Unauthenticated" }, 401);
   }
-  const parsed = parseSessionCookie(cookieValue, env.HERMES_WEB_SESSION_SECRET);
+  const parsed = parseSessionCookie(cookieValue, env.HERMES_VAN_SESSION_SECRET);
   if (!parsed) {
     return c.json({ error: "Invalid session" }, 401);
   }
@@ -133,7 +133,7 @@ export const csrfRequired: MiddlewareHandler = async (c, next) => {
     if (!session) {
       return c.json({ error: "Session vanished" }, 401);
     }
-    const expected = hashCsrfToken(cookieToken, env.HERMES_WEB_SESSION_SECRET);
+    const expected = hashCsrfToken(cookieToken, env.HERMES_VAN_SESSION_SECRET);
     if (!constantTimeEqual(expected, session.csrfTokenHash)) {
       logger.warn(
         { userId: user.id, sessionId: user.sessionId },

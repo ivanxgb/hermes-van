@@ -25,9 +25,9 @@ const REDACT_PATHS = [
   "*.upstreamRunId",
   "*.run_id",
   "*.runId",
-  "*.HERMES_API_KEY",
-  "*.HERMES_WEB_DB_KEY",
-  "*.HERMES_WEB_SESSION_SECRET",
+  "*.HERMES_VAN_GATEWAY_KEY",
+  "*.HERMES_VAN_DB_KEY",
+  "*.HERMES_VAN_SESSION_SECRET",
 ];
 
 let _logger: pino.Logger | null = null;
@@ -35,7 +35,7 @@ let _logger: pino.Logger | null = null;
 function build(): pino.Logger {
   const env = loadEnv();
   return pino({
-    level: env.HERMES_WEB_LOG_LEVEL,
+    level: env.HERMES_VAN_LOG_LEVEL,
     base: { service: "hermes-van", env: env.NODE_ENV },
     timestamp: pino.stdTimeFunctions.isoTime,
     redact: { paths: REDACT_PATHS, censor: "[REDACTED]" },

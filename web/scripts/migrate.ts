@@ -3,7 +3,7 @@
  *
  * Run with: pnpm db:migrate
  *
- * Reads HERMES_WEB_DB_PATH and HERMES_WEB_DB_KEY from env. Creates the
+ * Reads HERMES_VAN_DB_PATH and HERMES_VAN_DB_KEY from env. Creates the
  * file if missing. Idempotent — running twice is a no-op.
  */
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";

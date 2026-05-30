@@ -6,6 +6,7 @@
  *   /api/health        → liveness + gateway probe
  *   /auth/*            → setup, login, recovery, logout, me
  */
+import "dotenv/config";
 import { Hono } from "hono";
 import { logger as honoLogger } from "hono/logger";
 import { authRoutes } from "./auth/routes";
@@ -31,9 +32,9 @@ app.get("/api/health", async (c) => {
   try {
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), 2000);
-    const res = await fetch(`${env.HERMES_API_URL}/health`, {
+    const res = await fetch(`${env.HERMES_VAN_GATEWAY_URL}/health`, {
       signal: ctrl.signal,
-      headers: { Authorization: `Bearer ${env.HERMES_API_KEY}` },
+      headers: { Authorization: `Bearer ${env.HERMES_VAN_GATEWAY_KEY}` },
     });
     clearTimeout(t);
     gateway = { ok: res.ok, latencyMs: Date.now() - start };

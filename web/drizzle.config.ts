@@ -5,7 +5,7 @@ export default defineConfig({
   out: "./src/server/db/migrations",
   dialect: "sqlite",
   dbCredentials: {
-    url: process.env["HERMES_WEB_DB_PATH"] ?? "./data/hermes-van.db",
+    url: process.env["HERMES_VAN_DB_PATH"] ?? "./data/hermes-van.db",
   },
   verbose: true,
   strict: true,
