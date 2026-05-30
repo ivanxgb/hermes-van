@@ -32,6 +32,22 @@ export interface RunState {
   status: "streaming" | "completed" | "failed" | "cancelled";
   error: string | null;
   startedAt: number;
+  /**
+   * Pending tool-execution approval prompt forwarded by the gateway.
+   * When non-null, the run is paused waiting for the user to choose
+   * once / session / always / deny. The UI surfaces a callout in the
+   * chat panel with action buttons.
+   */
+  pendingApproval: PendingApproval | null;
+}
+
+export interface PendingApproval {
+  command: string;
+  description?: string;
+  patternKey?: string;
+  patternKeys?: string[];
+  choices: ReadonlyArray<"once" | "session" | "always" | "deny">;
+  receivedAt: number;
 }
 
 interface ChatState {
@@ -230,6 +246,7 @@ async function reconnectIfLive(chatId: string): Promise<void> {
         status: "streaming",
         error: null,
         startedAt: run.startedAt,
+        pendingApproval: null,
       },
     }));
     openStream({ runId: run.id, chatId: run.chatId, messageId: run.messageId });
@@ -309,6 +326,7 @@ export async function startChatRun(
       status: "streaming",
       error: null,
       startedAt: now,
+      pendingApproval: null,
     },
   }));
 
@@ -386,6 +404,47 @@ function openStream(input: { runId: string; chatId: string; messageId: string })
     finalize("failed", errMsg);
   });
   es.addEventListener("run.cancelled", () => finalize("cancelled"));
+
+  // Approval lifecycle: gateway forwards approval.request when a tool
+  // wants execution permission, approval.responded once we've POSTed
+  // back our choice. We surface both into the run state so the UI can
+  // render an inline callout with action buttons.
+  es.addEventListener("approval.request", (ev) => {
+    try {
+      const data = JSON.parse((ev as MessageEvent).data) as {
+        command?: string;
+        description?: string;
+        pattern_key?: string;
+        pattern_keys?: string[];
+        choices?: ReadonlyArray<"once" | "session" | "always" | "deny">;
+      };
+      patch(chatId, (s) => ({
+        ...s,
+        run: s.run
+          ? {
+              ...s.run,
+              pendingApproval: {
+                command: data.command ?? "(unknown command)",
+                description: data.description,
+                patternKey: data.pattern_key,
+                patternKeys: data.pattern_keys,
+                choices: data.choices ?? ["once", "session", "always", "deny"],
+                receivedAt: Date.now(),
+              },
+            }
+          : null,
+      }));
+    } catch {
+      // ignore malformed event
+    }
+  });
+
+  es.addEventListener("approval.responded", () => {
+    patch(chatId, (s) => ({
+      ...s,
+      run: s.run ? { ...s.run, pendingApproval: null } : null,
+    }));
+  });
   es.onerror = () => {
     if (es.readyState === EventSource.CLOSED) {
       finalize("failed", "stream closed");

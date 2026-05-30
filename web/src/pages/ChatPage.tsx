@@ -190,6 +190,15 @@ export function ChatPage() {
     }
   }
 
+  async function onApprove(choice: "once" | "session" | "always" | "deny") {
+    if (!focusedRun) return;
+    try {
+      await runsApi.approve(focusedRun.runId, choice);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Approval failed");
+    }
+  }
+
   async function onLogout() {
     closeAllStreams();
     await logout();
@@ -301,6 +310,49 @@ export function ChatPage() {
                 </button>
               ) : null}
             </header>
+
+            {focusedRun?.pendingApproval ? (
+              <div
+                className="approval-callout"
+                data-testid="approval-callout"
+                role="alertdialog"
+                aria-live="assertive"
+              >
+                <div className="approval-head">
+                  <span className="tag approval-tag">— approval required</span>
+                  {focusedRun.pendingApproval.description ? (
+                    <span className="approval-desc">
+                      {focusedRun.pendingApproval.description}
+                    </span>
+                  ) : null}
+                </div>
+                <pre
+                  className="approval-cmd"
+                  data-testid="approval-command"
+                >
+                  {focusedRun.pendingApproval.command}
+                </pre>
+                <div className="approval-actions">
+                  {focusedRun.pendingApproval.choices.map((choice) => (
+                    <button
+                      key={choice}
+                      type="button"
+                      className={`btn-sm ${
+                        choice === "deny"
+                          ? "btn-danger"
+                          : choice === "once"
+                            ? "btn-primary"
+                            : "btn-secondary"
+                      }`}
+                      data-testid={`approve-${choice}`}
+                      onClick={() => void onApprove(choice)}
+                    >
+                      {choice}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
 
             <section className="messages" data-testid="messages">
               {focused.messages.length === 0 ? (
