@@ -28,6 +28,7 @@ import {
 } from "../lib/chat-store";
 import { renderMarkdown, hardenLinks } from "../lib/markdown";
 import { CommandPalette } from "../components/CommandPalette";
+import { VoiceInput } from "../components/VoiceInput";
 
 function MessageBody({ content, streaming }: { content: string; streaming: boolean }) {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -504,14 +505,32 @@ export function ChatPage() {
                 rows={3}
                 data-testid="composer-input"
               />
-              <button
-                type="submit"
-                className="btn-primary"
-                disabled={!canSend}
-                data-testid="composer-send"
-              >
-                {streaming ? "Streaming…" : "Send"}
-              </button>
+              <div className="composer-actions">
+                <VoiceInput
+                  disabled={streaming}
+                  onTranscript={(chunk, isFinal) => {
+                    // Only commit final chunks to the input. Interim
+                    // results would cause the textarea to reset on every
+                    // partial transcription as the speech engine
+                    // refines its guess; appending only on final keeps
+                    // the visible text stable.
+                    if (!isFinal) return;
+                    setInput((prev) =>
+                      prev.length > 0 && !prev.endsWith(" ")
+                        ? `${prev} ${chunk.trim()}`
+                        : `${prev}${chunk.trim()}`,
+                    );
+                  }}
+                />
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  disabled={!canSend}
+                  data-testid="composer-send"
+                >
+                  {streaming ? "Streaming…" : "Send"}
+                </button>
+              </div>
             </form>
           </>
         )}

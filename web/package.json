@@ -50,6 +50,8 @@
   "devDependencies": {
     "@hono/vite-dev-server": "^0.18.1",
     "@playwright/test": "^1.49.0",
+    "@testing-library/dom": "10.4.0",
+    "@testing-library/react": "16.1.0",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.10.5",
     "@types/react": "^19.0.7",
@@ -58,6 +60,7 @@
     "@vitest/coverage-v8": "^2.1.8",
     "dotenv": "^17.4.2",
     "drizzle-kit": "^0.29.1",
+    "jsdom": "26.0.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",
     "vite": "^6.0.7",
