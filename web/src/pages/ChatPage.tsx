@@ -31,6 +31,7 @@ import { useScrollAnchor } from "../lib/scroll-anchor";
 import { estimateTokens, formatTokens } from "../lib/token-estimate";
 import { CommandPalette } from "../components/CommandPalette";
 import { SearchPalette } from "../components/SearchPalette";
+import { ModelSelector } from "../components/ModelSelector";
 import {
   SlashAutocomplete,
   getSlashMatches,
@@ -267,11 +268,13 @@ export function ChatPage() {
     );
     if (next === null) return; // user cancelled
     const trimmed = next.trim();
+    await setChatModel(id, trimmed === "" ? null : trimmed);
+  }
+
+  async function setChatModel(id: string, model: string | null) {
     setError(null);
     try {
-      const { chat } = await chatsApi.patch(id, {
-        model: trimmed === "" ? null : trimmed,
-      });
+      const { chat } = await chatsApi.patch(id, { model });
       setChatList((prev) => prev.map((c) => (c.id === id ? chat : c)));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Model change failed");
@@ -517,6 +520,11 @@ export function ChatPage() {
                 {selectedChat.title}
               </h2>
               <div className="chat-head-actions">
+                <ModelSelector
+                  value={selectedChat.model ?? null}
+                  onPick={(id) => void setChatModel(selectedChat.id, id)}
+                  disabled={streaming}
+                />
                 {streaming ? (
                   <button
                     className="btn-secondary btn-sm"
