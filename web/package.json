@@ -22,6 +22,7 @@
     "db:migrate": "node --env-file=.env --import tsx scripts/migrate.ts",
     "hermes-van:bootstrap": "node --env-file=.env --import tsx scripts/bootstrap.ts",
     "hermes-van:backup": "node --env-file=.env --import tsx scripts/backup.ts",
+    "hermes-van:restore": "node --env-file=.env --import tsx scripts/restore.ts",
     "hermes-van:vapid": "node --import tsx scripts/vapid.ts"
   },
   "dependencies": {

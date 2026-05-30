@@ -16,8 +16,8 @@
  */
 import "dotenv/config";
 import Database from "better-sqlite3-multiple-ciphers";
-import { mkdirSync, statSync, unlinkSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { mkdirSync, readdirSync, statSync, unlinkSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { loadEnv } from "../src/server/lib/env";
 
 interface BackupResult {
@@ -26,6 +26,7 @@ interface BackupResult {
   bytes: number;
   rowCounts: Record<string, number>;
   durationMs: number;
+  pruned: string[];
 }
 
 const SENTINEL_TABLES = [
@@ -64,6 +65,37 @@ function countRows(db: Database.Database, table: string): number {
     .prepare<[], { c: number }>(`SELECT count(*) AS c FROM "${table}"`)
     .get();
   return r?.c ?? 0;
+}
+
+/**
+ * Delete oldest *.db backups in `dir` so at most `keep` remain. Only
+ * touches files matching the hermes-van-*.db naming convention so a
+ * stray restore export or unrelated file is never deleted. Returns the
+ * list of pruned absolute paths.
+ */
+function pruneOldBackups(dir: string, keep: number): string[] {
+  if (keep <= 0) return [];
+  let entries: string[];
+  try {
+    entries = readdirSync(dir);
+  } catch {
+    return [];
+  }
+  const candidates = entries
+    .filter((n) => /^hermes-van-.+\.db$/.test(n))
+    .map((n) => ({ name: n, path: join(dir, n), mtime: statSync(join(dir, n)).mtimeMs }))
+    .sort((a, b) => b.mtime - a.mtime); // newest first
+  const stale = candidates.slice(keep);
+  const pruned: string[] = [];
+  for (const f of stale) {
+    try {
+      unlinkSync(f.path);
+      pruned.push(f.path);
+    } catch {
+      // best effort
+    }
+  }
+  return pruned;
 }
 
 async function backup(targetOverride?: string): Promise<BackupResult> {
@@ -136,12 +168,23 @@ async function backup(targetOverride?: string): Promise<BackupResult> {
   }
 
   const bytes = statSync(target).size;
+
+  // Retention: keep N most-recent backups in the target directory.
+  // Skipped when --output overrides the canonical backups/ dir, since
+  // the user explicitly asked for a one-off path in that case.
+  const targetDir = dirname(target);
+  const isCanonicalDir = !targetOverride;
+  const pruned = isCanonicalDir
+    ? pruneOldBackups(targetDir, env.HERMES_VAN_BACKUP_RETENTION)
+    : [];
+
   return {
     source: sourcePath,
     target,
     bytes,
     rowCounts: verifyCounts,
     durationMs: Date.now() - start,
+    pruned,
   };
 }
 
@@ -163,6 +206,10 @@ async function main() {
     console.log(`  row counts (verified):`);
     for (const [t, n] of Object.entries(r.rowCounts)) {
       console.log(`    ${t.padEnd(24)} ${n}`);
+    }
+    if (r.pruned.length > 0) {
+      console.log(`  pruned ${r.pruned.length} old backup(s):`);
+      for (const p of r.pruned) console.log(`    - ${p}`);
     }
   } catch (err) {
     console.error(`✗ backup failed: ${err instanceof Error ? err.message : err}`);

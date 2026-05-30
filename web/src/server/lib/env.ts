@@ -66,6 +66,11 @@ const schema = z
       .url()
       .optional(),
     HERMES_VAN_ALERT_BEARER: z.string().min(1).optional(),
+
+    // Backup retention — how many timestamped backups to keep in the
+    // backups/ directory after each successful run. Older files are
+    // pruned. Set to 0 to disable retention (keep all). Default: 14.
+    HERMES_VAN_BACKUP_RETENTION: z.coerce.number().int().min(0).default(14),
   })
   .superRefine((data, ctx) => {
     // Defense in depth: never accept default placeholder secrets in production

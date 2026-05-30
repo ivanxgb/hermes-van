@@ -113,6 +113,62 @@ You don't have to do anything. To force a check:
 sudo bash ~/projects/hermes-van/deploy/scripts/certbot.sh
 ```
 
+## Backups & restore
+
+The DB is encrypted with `HERMES_VAN_DB_KEY`. Backups are byte-identical
+copies of the live cipher pages, so the same key opens them.
+
+```bash
+# Take a backup. Verifies sentinel row counts + integrity_check before
+# returning success. Lands in ~/projects/hermes-van/web/backups/.
+cd ~/projects/hermes-van/web && pnpm hermes-van:backup
+
+# Retention is governed by HERMES_VAN_BACKUP_RETENTION (default 14).
+# Older hermes-van-*.db files in backups/ are pruned after a successful
+# run. Files that don't match that naming convention are never touched.
+
+# Schedule daily backups via systemd --user timer (linger is on):
+mkdir -p ~/.config/systemd/user
+cat > ~/.config/systemd/user/hermes-van-backup.service <<'EOF'
+[Unit]
+Description=hermes-van encrypted DB backup
+[Service]
+Type=oneshot
+WorkingDirectory=%h/projects/hermes-van/web
+ExecStart=/usr/bin/pnpm hermes-van:backup
+EOF
+cat > ~/.config/systemd/user/hermes-van-backup.timer <<'EOF'
+[Unit]
+Description=hermes-van daily backup
+[Timer]
+OnCalendar=*-*-* 03:30:00
+Persistent=true
+[Install]
+WantedBy=timers.target
+EOF
+systemctl --user daemon-reload
+systemctl --user enable --now hermes-van-backup.timer
+```
+
+Restoring is interactive by default and creates a pre-restore snapshot
+so the operation is reversible:
+
+```bash
+# Stop the service first so SQLite isn't holding the file.
+systemctl --user stop hermes-van
+
+# Restore. Refuses to run if the backup can't be opened with the
+# current HERMES_VAN_DB_KEY (defense against restoring the wrong DB).
+cd ~/projects/hermes-van/web
+pnpm hermes-van:restore ./backups/hermes-van-2026-05-30T03-30-00-000Z.db
+
+# Bring the service back up.
+systemctl --user start hermes-van
+```
+
+If the restore turned out to be wrong, the snapshot path is printed at
+the end of the run; pass it back to `hermes-van:restore` to roll back.
+
 ## Reverting
 
 Stop the service and remove nginx site:
