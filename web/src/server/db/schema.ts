@@ -129,3 +129,123 @@ export const setupTokens = sqliteTable("setup_tokens", {
   usedAt: integer("used_at"),
   createdAt: integer("created_at").notNull().default(sql`(unixepoch() * 1000)`),
 });
+
+// ────────────────────────────────────────────────────────────────────────
+// chats
+// User-owned conversation containers. The chat's ID is what the client
+// sees; it is mapped to a server-side gateway session_id (1:1) so the
+// upstream agent retains memory across runs without exposing gateway IDs
+// to the browser.
+// ────────────────────────────────────────────────────────────────────────
+export const chats = sqliteTable(
+  "chats",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    title: text("title").notNull().default("New chat"),
+    // Stable opaque id sent to gateway as session_id. We never expose
+    // upstream run_ids; this gives the agent persistent memory while
+    // keeping the client decoupled from gateway internals.
+    gatewaySessionId: text("gateway_session_id").notNull().unique(),
+    model: text("model"), // null → default
+    archivedAt: integer("archived_at"),
+    lastMessageAt: integer("last_message_at"),
+    createdAt: integer("created_at").notNull().default(sql`(unixepoch() * 1000)`),
+    updatedAt: integer("updated_at").notNull().default(sql`(unixepoch() * 1000)`),
+  },
+  (t) => ({
+    userIdx: index("ix_chats_user").on(t.userId),
+    userLastMsgIdx: index("ix_chats_user_lastmsg").on(t.userId, t.lastMessageAt),
+  }),
+);
+
+// ────────────────────────────────────────────────────────────────────────
+// messages
+// Append-only log of user/assistant turns rendered in the UI. Streaming
+// deltas are accumulated server-side; the row is finalized when the run
+// completes (or marked failed/cancelled).
+//
+// `runId` references active_runs.id (local ULID, never the upstream
+// gateway run_id). `status` distinguishes streaming → completed → failed.
+// ────────────────────────────────────────────────────────────────────────
+export const messages = sqliteTable(
+  "messages",
+  {
+    id: text("id").primaryKey(),
+    chatId: text("chat_id")
+      .notNull()
+      .references(() => chats.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    role: text("role", { enum: ["user", "assistant", "system", "tool"] }).notNull(),
+    content: text("content").notNull().default(""),
+    // local run id (ULID) — null for user messages
+    runId: text("run_id"),
+    status: text("status", {
+      enum: ["pending", "streaming", "completed", "failed", "cancelled"],
+    })
+      .notNull()
+      .default("completed"),
+    error: text("error"),
+    metadata: text("metadata"), // JSON: { reasoning?, tool_calls?, usage? }
+    createdAt: integer("created_at").notNull().default(sql`(unixepoch() * 1000)`),
+    updatedAt: integer("updated_at").notNull().default(sql`(unixepoch() * 1000)`),
+  },
+  (t) => ({
+    chatCreatedIdx: index("ix_messages_chat_created").on(t.chatId, t.createdAt),
+    userIdx: index("ix_messages_user").on(t.userId),
+    runIdx: index("ix_messages_run").on(t.runId),
+  }),
+);
+
+// ────────────────────────────────────────────────────────────────────────
+// active_runs
+// SSE bridge state. The browser sees only `id` (a local ULID); the
+// `upstreamRunId` returned by POST /v1/runs is kept server-side so the
+// gateway run is never exposed to clients (capability isolation).
+//
+// Lifecycle: queued → running → (waiting_for_approval ↔ running) →
+//   completed | failed | cancelled
+// Rows are kept after completion for ~24h then GC'd; the message they
+// produced lives on in `messages` regardless.
+// ────────────────────────────────────────────────────────────────────────
+export const activeRuns = sqliteTable(
+  "active_runs",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    chatId: text("chat_id")
+      .notNull()
+      .references(() => chats.id, { onDelete: "cascade" }),
+    messageId: text("message_id")
+      .notNull()
+      .references(() => messages.id, { onDelete: "cascade" }),
+    upstreamRunId: text("upstream_run_id").notNull(),
+    status: text("status", {
+      enum: [
+        "queued",
+        "running",
+        "waiting_for_approval",
+        "stopping",
+        "completed",
+        "failed",
+        "cancelled",
+      ],
+    })
+      .notNull()
+      .default("queued"),
+    error: text("error"),
+    startedAt: integer("started_at").notNull().default(sql`(unixepoch() * 1000)`),
+    finishedAt: integer("finished_at"),
+  },
+  (t) => ({
+    userIdx: index("ix_runs_user").on(t.userId),
+    chatIdx: index("ix_runs_chat").on(t.chatId),
+    upstreamIdx: index("ix_runs_upstream").on(t.upstreamRunId),
+  }),
+);

@@ -118,7 +118,7 @@ export function SetupPage() {
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             required
-            pattern="[a-zA-Z0-9_-]+"
+            pattern="[A-Za-z0-9_\-]+"
             minLength={2}
             maxLength={64}
             placeholder="ivan"

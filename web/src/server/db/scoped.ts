@@ -37,6 +37,12 @@ type NewWebSession = typeof schema.webSessions.$inferInsert;
 type RecoveryCode = typeof schema.recoveryCodes.$inferSelect;
 type NewRecoveryCode = typeof schema.recoveryCodes.$inferInsert;
 type AuditEvent = typeof schema.auditLog.$inferSelect;
+type Chat = typeof schema.chats.$inferSelect;
+type NewChat = typeof schema.chats.$inferInsert;
+type Message = typeof schema.messages.$inferSelect;
+type NewMessage = typeof schema.messages.$inferInsert;
+type ActiveRun = typeof schema.activeRuns.$inferSelect;
+type NewActiveRun = typeof schema.activeRuns.$inferInsert;
 
 // ─── Validation ─────────────────────────────────────────────────────────
 
@@ -246,6 +252,209 @@ export class ScopedDb {
         q = q.limit(opts.limit) as typeof q;
       }
       return q.all();
+    },
+  };
+
+  // ── chats ──
+  chats = {
+    list: (opts: { includeArchived?: boolean; limit?: number } = {}): Chat[] => {
+      const conds = [eq(schema.chats.userId, this.userId)];
+      if (!opts.includeArchived) {
+        conds.push(sql`${schema.chats.archivedAt} IS NULL`);
+      }
+      let q = this.db
+        .select()
+        .from(schema.chats)
+        .where(and(...conds))
+        .orderBy(sql`COALESCE(${schema.chats.lastMessageAt}, ${schema.chats.createdAt}) DESC`);
+      if (opts.limit !== undefined) q = q.limit(opts.limit) as typeof q;
+      return q.all();
+    },
+
+    byId: (id: string): Chat | undefined => {
+      return this.db
+        .select()
+        .from(schema.chats)
+        .where(and(eq(schema.chats.userId, this.userId), eq(schema.chats.id, id)))
+        .get();
+    },
+
+    insert: (data: Omit<NewChat, "userId">): Chat => {
+      const row: NewChat = { ...data, userId: this.userId };
+      this.db.insert(schema.chats).values(row).run();
+      const inserted = this.chats.byId(row.id);
+      if (!inserted) throw new Error("Insert verification failed");
+      return inserted;
+    },
+
+    rename: (id: string, title: string): void => {
+      const existing = this.chats.byId(id);
+      assertOwnership(existing, this.userId);
+      this.db
+        .update(schema.chats)
+        .set({ title, updatedAt: Date.now() })
+        .where(and(eq(schema.chats.userId, this.userId), eq(schema.chats.id, id)))
+        .run();
+    },
+
+    archive: (id: string): void => {
+      const existing = this.chats.byId(id);
+      assertOwnership(existing, this.userId);
+      this.db
+        .update(schema.chats)
+        .set({ archivedAt: Date.now(), updatedAt: Date.now() })
+        .where(and(eq(schema.chats.userId, this.userId), eq(schema.chats.id, id)))
+        .run();
+    },
+
+    unarchive: (id: string): void => {
+      const existing = this.chats.byId(id);
+      assertOwnership(existing, this.userId);
+      this.db
+        .update(schema.chats)
+        .set({ archivedAt: null, updatedAt: Date.now() })
+        .where(and(eq(schema.chats.userId, this.userId), eq(schema.chats.id, id)))
+        .run();
+    },
+
+    delete: (id: string): void => {
+      const existing = this.chats.byId(id);
+      assertOwnership(existing, this.userId);
+      this.db
+        .delete(schema.chats)
+        .where(and(eq(schema.chats.userId, this.userId), eq(schema.chats.id, id)))
+        .run();
+    },
+
+    touchLastMessage: (id: string, at: number): void => {
+      this.db
+        .update(schema.chats)
+        .set({ lastMessageAt: at, updatedAt: at })
+        .where(and(eq(schema.chats.userId, this.userId), eq(schema.chats.id, id)))
+        .run();
+    },
+  };
+
+  // ── messages ──
+  messages = {
+    listForChat: (chatId: string, opts: { limit?: number; before?: number } = {}): Message[] => {
+      const conds = [
+        eq(schema.messages.userId, this.userId),
+        eq(schema.messages.chatId, chatId),
+      ];
+      if (opts.before !== undefined) conds.push(lte(schema.messages.createdAt, opts.before));
+      let q = this.db
+        .select()
+        .from(schema.messages)
+        .where(and(...conds))
+        .orderBy(sql`${schema.messages.createdAt} ASC, ${schema.messages.id} ASC`);
+      if (opts.limit !== undefined) q = q.limit(opts.limit) as typeof q;
+      return q.all();
+    },
+
+    byId: (id: string): Message | undefined => {
+      return this.db
+        .select()
+        .from(schema.messages)
+        .where(and(eq(schema.messages.userId, this.userId), eq(schema.messages.id, id)))
+        .get();
+    },
+
+    insert: (data: Omit<NewMessage, "userId">): Message => {
+      const row: NewMessage = { ...data, userId: this.userId };
+      this.db.insert(schema.messages).values(row).run();
+      const inserted = this.messages.byId(row.id);
+      if (!inserted) throw new Error("Insert verification failed");
+      return inserted;
+    },
+
+    appendDelta: (id: string, delta: string): void => {
+      const existing = this.messages.byId(id);
+      assertOwnership(existing, this.userId);
+      this.db
+        .update(schema.messages)
+        .set({
+          content: sql`${schema.messages.content} || ${delta}`,
+          updatedAt: Date.now(),
+        })
+        .where(and(eq(schema.messages.userId, this.userId), eq(schema.messages.id, id)))
+        .run();
+    },
+
+    finalize: (id: string, opts: { status: Message["status"]; error?: string; metadata?: string }): void => {
+      const existing = this.messages.byId(id);
+      assertOwnership(existing, this.userId);
+      this.db
+        .update(schema.messages)
+        .set({
+          status: opts.status,
+          error: opts.error ?? null,
+          metadata: opts.metadata ?? null,
+          updatedAt: Date.now(),
+        })
+        .where(and(eq(schema.messages.userId, this.userId), eq(schema.messages.id, id)))
+        .run();
+    },
+  };
+
+  // ── active runs ──
+  activeRuns = {
+    byId: (id: string): ActiveRun | undefined => {
+      return this.db
+        .select()
+        .from(schema.activeRuns)
+        .where(and(eq(schema.activeRuns.userId, this.userId), eq(schema.activeRuns.id, id)))
+        .get();
+    },
+
+    byUpstreamId: (upstreamRunId: string): ActiveRun | undefined => {
+      return this.db
+        .select()
+        .from(schema.activeRuns)
+        .where(
+          and(
+            eq(schema.activeRuns.userId, this.userId),
+            eq(schema.activeRuns.upstreamRunId, upstreamRunId),
+          ),
+        )
+        .get();
+    },
+
+    listForChat: (chatId: string): ActiveRun[] => {
+      return this.db
+        .select()
+        .from(schema.activeRuns)
+        .where(
+          and(eq(schema.activeRuns.userId, this.userId), eq(schema.activeRuns.chatId, chatId)),
+        )
+        .orderBy(sql`${schema.activeRuns.startedAt} DESC`)
+        .all();
+    },
+
+    insert: (data: Omit<NewActiveRun, "userId">): ActiveRun => {
+      const row: NewActiveRun = { ...data, userId: this.userId };
+      this.db.insert(schema.activeRuns).values(row).run();
+      const inserted = this.activeRuns.byId(row.id);
+      if (!inserted) throw new Error("Insert verification failed");
+      return inserted;
+    },
+
+    setStatus: (
+      id: string,
+      status: ActiveRun["status"],
+      opts: { error?: string; finishedAt?: number } = {},
+    ): void => {
+      const existing = this.activeRuns.byId(id);
+      assertOwnership(existing, this.userId);
+      this.db
+        .update(schema.activeRuns)
+        .set({
+          status,
+          error: opts.error ?? null,
+          finishedAt: opts.finishedAt ?? null,
+        })
+        .where(and(eq(schema.activeRuns.userId, this.userId), eq(schema.activeRuns.id, id)))
+        .run();
     },
   };
 }
