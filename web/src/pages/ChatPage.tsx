@@ -1,48 +1,47 @@
 /**
- * Chat surface — sidebar with chat list + active chat panel.
+ * Chat surface — sidebar with chat list + main panel for the active chat.
  *
- * Live streaming is wired to /api/runs/:id/events via EventSource.
- * The hook handles delta accumulation locally; the server persists
- * messages in parallel so a refresh restores state.
+ * State lives in the multi-chat store (lib/chat-store), so switching
+ * chats does NOT abort an in-flight run. Each chat has its own
+ * EventSource managed by the store; the sidebar shows a live indicator
+ * for chats that are streaming in the background.
  */
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import {
   chats as chatsApi,
   runs as runsApi,
   type Chat,
-  type Message,
 } from "../lib/api";
 import { logout, useAuth } from "../lib/auth-store";
-
-interface StreamingState {
-  runId: string | null;
-  messageId: string | null;
-  content: string;
-  status: "idle" | "streaming" | "completed" | "failed" | "cancelled";
-  error: string | null;
-}
-
-const IDLE_STREAM: StreamingState = {
-  runId: null,
-  messageId: null,
-  content: "",
-  status: "idle",
-  error: null,
-};
+import {
+  closeAllStreams,
+  getActiveRuns,
+  loadChat,
+  startChatRun,
+  useAnyChatChange,
+  useChat,
+} from "../lib/chat-store";
 
 export function ChatPage() {
   const [, setLocation] = useLocation();
   const auth = useAuth();
   const [chatList, setChatList] = useState<Chat[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [stream, setStream] = useState<StreamingState>(IDLE_STREAM);
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const esRef = useRef<EventSource | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  // Subscribe to the global change signal so badges update in real time.
+  useAnyChatChange();
+
+  // Live state for the focused chat (subscribes to the store).
+  const focused = useChat(selectedId);
+  const focusedRun = focused.run;
+
+  // Snapshot of every chat's run state, refreshed by the global subscription.
+  const activeRuns = useMemo(() => getActiveRuns(), []);
+  void activeRuns; // retained for clarity; getActiveRuns is read fresh per render below
 
   // ── load chat list on mount ──
   const refreshChats = useCallback(async () => {
@@ -59,40 +58,16 @@ export function ChatPage() {
     void refreshChats();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── load messages when selected chat changes ──
+  // Hydrate messages whenever a different chat is selected.
   useEffect(() => {
-    if (!selectedId) {
-      setMessages([]);
-      return;
-    }
-    let cancelled = false;
-    void (async () => {
-      try {
-        const { messages: msgs } = await chatsApi.messages(selectedId);
-        if (!cancelled) setMessages(msgs);
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to load messages");
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+    if (!selectedId) return;
+    void loadChat(selectedId);
   }, [selectedId]);
 
-  // ── close any active SSE on unmount or chat switch ──
-  useEffect(() => {
-    return () => {
-      esRef.current?.close();
-      esRef.current = null;
-    };
-  }, []);
-
-  // Auto-scroll on new messages or stream tick
+  // Auto-scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, stream.content]);
+  }, [focused.messages, focusedRun?.status]);
 
   // ── actions ──
 
@@ -102,7 +77,6 @@ export function ChatPage() {
       const { chat } = await chatsApi.create({});
       setChatList((prev) => [chat, ...prev]);
       setSelectedId(chat.id);
-      setMessages([]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create chat");
     }
@@ -115,7 +89,6 @@ export function ChatPage() {
       setChatList((prev) => prev.filter((c) => c.id !== id));
       if (selectedId === id) {
         setSelectedId(null);
-        setMessages([]);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Delete failed");
@@ -124,133 +97,43 @@ export function ChatPage() {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedId || !input.trim() || busy) return;
-    setBusy(true);
+    if (!selectedId || !input.trim()) return;
+    if (focusedRun && focusedRun.status === "streaming") return;
     setError(null);
     const text = input;
     setInput("");
 
     try {
-      const { run, userMessage, assistantMessage } = await chatsApi.startRun(
-        selectedId,
-        { input: text },
-      );
-      // Optimistically append user + assistant placeholder
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: userMessage.id,
-          chatId: selectedId,
-          userId: auth.user?.userId ?? "",
-          role: "user",
-          content: userMessage.content,
-          runId: null,
-          status: "completed",
-          error: null,
-          metadata: null,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        },
-        {
-          id: assistantMessage.id,
-          chatId: selectedId,
-          userId: auth.user?.userId ?? "",
-          role: "assistant",
-          content: "",
-          runId: run.id,
-          status: "streaming",
-          error: null,
-          metadata: null,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        },
-      ]);
-      setStream({
-        runId: run.id,
-        messageId: assistantMessage.id,
-        content: "",
-        status: "streaming",
-        error: null,
-      });
-      openStream(run.id, assistantMessage.id, selectedId);
+      await startChatRun(selectedId, text, { userId: auth.user?.userId ?? "" });
+      // re-pull chat list so lastMessageAt ordering reflects this run
+      void chatsApi.list().then(({ chats }) => setChatList(chats));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to start run");
-      setBusy(false);
     }
   }
 
-  function openStream(runId: string, messageId: string, chatId: string) {
-    esRef.current?.close();
-    const es = new EventSource(`/api/runs/${runId}/events`);
-    esRef.current = es;
-
-    es.addEventListener("message.delta", (ev) => {
-      try {
-        const data = JSON.parse((ev as MessageEvent).data) as { delta?: string };
-        const delta = String(data.delta ?? "");
-        setStream((s) => ({ ...s, content: s.content + delta }));
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === messageId ? { ...m, content: m.content + delta } : m,
-          ),
-        );
-      } catch {
-        // ignore
-      }
-    });
-
-    const finalize = (status: "completed" | "failed" | "cancelled", error?: string) => {
-      es.close();
-      esRef.current = null;
-      setStream({ ...IDLE_STREAM, status });
-      setBusy(false);
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === messageId ? { ...m, status, error: error ?? null } : m,
-        ),
-      );
-      // refresh chat list ordering (lastMessageAt updated server-side)
-      void chatsApi.list().then(({ chats: cs }) => setChatList(cs));
-      // re-fetch messages to pick up any usage metadata
-      void chatsApi.messages(chatId).then(({ messages: ms }) => setMessages(ms));
-    };
-
-    es.addEventListener("run.completed", () => finalize("completed"));
-    es.addEventListener("run.failed", (ev) => {
-      let errMsg = "run failed";
-      try {
-        errMsg = JSON.parse((ev as MessageEvent).data).error ?? errMsg;
-      } catch {
-        // ignore
-      }
-      finalize("failed", errMsg);
-    });
-    es.addEventListener("run.cancelled", () => finalize("cancelled"));
-    es.onerror = () => {
-      // EventSource auto-retries; only treat as failure if we never get
-      // a terminal event AND the readyState is closed.
-      if (es.readyState === EventSource.CLOSED) {
-        finalize("failed", "stream closed");
-      }
-    };
-  }
-
   async function onStop() {
-    if (!stream.runId) return;
+    if (!focusedRun) return;
     try {
-      await runsApi.stop(stream.runId);
+      await runsApi.stop(focusedRun.runId);
     } catch {
-      // ignore
+      // ignore — server-side stop will fire run.cancelled regardless
     }
   }
 
   async function onLogout() {
+    closeAllStreams();
     await logout();
     setLocation("/login");
   }
 
   const selectedChat = chatList.find((c) => c.id === selectedId) ?? null;
-  const canSend = !!selectedId && input.trim().length > 0 && !busy;
+  const streaming = focusedRun?.status === "streaming";
+  const canSend = !!selectedId && input.trim().length > 0 && !streaming;
+
+  // Read fresh per-render so badges flip from streaming → idle as soon
+  // as the store finalizes a run.
+  const liveRuns = getActiveRuns();
 
   return (
     <div className="chat-shell">
@@ -270,27 +153,38 @@ export function ChatPage() {
           {chatList.length === 0 ? (
             <div className="empty">no chats yet</div>
           ) : (
-            chatList.map((c) => (
-              <div
-                key={c.id}
-                className={`chat-row ${c.id === selectedId ? "active" : ""}`}
-                onClick={() => setSelectedId(c.id)}
-                data-testid={`chat-row-${c.id}`}
-              >
-                <span className="chat-title">{c.title}</span>
-                <button
-                  className="btn-ghost btn-xs"
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    void onDeleteChat(c.id);
-                  }}
-                  aria-label="Delete chat"
+            chatList.map((c) => {
+              const live = liveRuns.has(c.id);
+              return (
+                <div
+                  key={c.id}
+                  className={`chat-row ${c.id === selectedId ? "active" : ""}`}
+                  onClick={() => setSelectedId(c.id)}
+                  data-testid={`chat-row-${c.id}`}
+                  data-live={live ? "true" : "false"}
                 >
-                  ×
-                </button>
-              </div>
-            ))
+                  <span className="chat-title">{c.title}</span>
+                  {live ? (
+                    <span
+                      className="live-dot"
+                      data-testid={`chat-live-${c.id}`}
+                      title="Streaming"
+                    />
+                  ) : null}
+                  <button
+                    className="btn-ghost btn-xs"
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void onDeleteChat(c.id);
+                    }}
+                    aria-label="Delete chat"
+                  >
+                    ×
+                  </button>
+                </div>
+              );
+            })
           )}
         </nav>
         <div className="sidebar-foot">
@@ -316,18 +210,23 @@ export function ChatPage() {
               <h2 className="chat-title-lg" data-testid="active-chat-title">
                 {selectedChat.title}
               </h2>
-              {stream.status === "streaming" ? (
-                <button className="btn-secondary btn-sm" type="button" onClick={onStop}>
+              {streaming ? (
+                <button
+                  className="btn-secondary btn-sm"
+                  type="button"
+                  onClick={onStop}
+                  data-testid="stop-btn"
+                >
                   stop
                 </button>
               ) : null}
             </header>
 
             <section className="messages" data-testid="messages">
-              {messages.length === 0 ? (
+              {focused.messages.length === 0 ? (
                 <div className="empty">no messages yet — say hi</div>
               ) : (
-                messages.map((m) => (
+                focused.messages.map((m) => (
                   <article
                     key={m.id}
                     className={`msg msg-${m.role} msg-${m.status}`}
@@ -360,8 +259,12 @@ export function ChatPage() {
                     void onSubmit(e as unknown as React.FormEvent);
                   }
                 }}
-                placeholder={busy ? "Streaming…" : "Send a message (Enter to send, Shift+Enter for newline)"}
-                disabled={busy}
+                placeholder={
+                  streaming
+                    ? "Streaming… (this chat) — switch tabs freely"
+                    : "Send a message (Enter to send, Shift+Enter for newline)"
+                }
+                disabled={streaming}
                 rows={3}
                 data-testid="composer-input"
               />
@@ -371,7 +274,7 @@ export function ChatPage() {
                 disabled={!canSend}
                 data-testid="composer-send"
               >
-                {busy ? "Sending…" : "Send"}
+                {streaming ? "Streaming…" : "Send"}
               </button>
             </form>
           </>
