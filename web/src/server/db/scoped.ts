@@ -45,6 +45,8 @@ type Message = typeof schema.messages.$inferSelect;
 type NewMessage = typeof schema.messages.$inferInsert;
 type ActiveRun = typeof schema.activeRuns.$inferSelect;
 type NewActiveRun = typeof schema.activeRuns.$inferInsert;
+type Attachment = typeof schema.attachments.$inferSelect;
+type NewAttachment = typeof schema.attachments.$inferInsert;
 
 // ─── Validation ─────────────────────────────────────────────────────────
 
@@ -591,6 +593,95 @@ export class ScopedDb {
         })
         .where(and(eq(schema.activeRuns.userId, this.userId), eq(schema.activeRuns.id, id)))
         .run();
+    },
+  };
+
+  /** ─── attachments (Phase 6.D) ─────────────────────────────── */
+  attachments = {
+    byId: (id: string): Attachment | undefined => {
+      return this.db
+        .select()
+        .from(schema.attachments)
+        .where(
+          and(eq(schema.attachments.userId, this.userId), eq(schema.attachments.id, id)),
+        )
+        .get();
+    },
+
+    bySha256: (sha256: string): Attachment | undefined => {
+      return this.db
+        .select()
+        .from(schema.attachments)
+        .where(
+          and(
+            eq(schema.attachments.userId, this.userId),
+            eq(schema.attachments.sha256, sha256),
+          ),
+        )
+        .get();
+    },
+
+    listForChat: (chatId: string): Attachment[] => {
+      return this.db
+        .select()
+        .from(schema.attachments)
+        .where(
+          and(
+            eq(schema.attachments.userId, this.userId),
+            eq(schema.attachments.chatId, chatId),
+          ),
+        )
+        .orderBy(sql`${schema.attachments.createdAt} DESC`)
+        .all();
+    },
+
+    listAll: (limit = 100): Attachment[] => {
+      return this.db
+        .select()
+        .from(schema.attachments)
+        .where(eq(schema.attachments.userId, this.userId))
+        .orderBy(sql`${schema.attachments.createdAt} DESC`)
+        .limit(limit)
+        .all();
+    },
+
+    insert: (data: Omit<NewAttachment, "userId">): Attachment => {
+      const row: NewAttachment = { ...data, userId: this.userId };
+      this.db.insert(schema.attachments).values(row).run();
+      const inserted = this.attachments.byId(row.id);
+      if (!inserted) throw new Error("Attachment insert verification failed");
+      return inserted;
+    },
+
+    delete: (id: string): boolean => {
+      const existing = this.attachments.byId(id);
+      if (!existing) return false;
+      assertOwnership(existing, this.userId);
+      this.db
+        .delete(schema.attachments)
+        .where(
+          and(
+            eq(schema.attachments.userId, this.userId),
+            eq(schema.attachments.id, id),
+          ),
+        )
+        .run();
+      return true;
+    },
+
+    /**
+     * Refcount across all users for a given sha256. Used by GC: a
+     * blob is safe to remove from disk only when refcount drops to 0.
+     * Crosses the user boundary by design — refcount is a property of
+     * the storage layer, not of the user. Returns 0 for unknown hashes.
+     */
+    refcountGlobal: (sha256: string): number => {
+      const r = this.db
+        .select({ c: sql<number>`count(*)` })
+        .from(schema.attachments)
+        .where(eq(schema.attachments.sha256, sha256))
+        .get();
+      return r?.c ?? 0;
     },
   };
 }

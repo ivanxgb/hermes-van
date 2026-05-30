@@ -278,3 +278,37 @@ export const pushSubscriptions = sqliteTable(
     endpointIdx: index("ix_push_endpoint").on(t.endpoint),
   }),
 );
+
+// ────────────────────────────────────────────────────────────────────────
+// attachments  (Phase 6.D)
+// User-uploaded files referenced from messages via the MEDIA: protocol.
+// Storage is content-addressed under data/uploads/<aa>/<sha256>: same
+// bytes uploaded twice resolve to one file on disk (cheap dedup, also
+// makes integrity verification trivial — re-hash and compare).
+//
+// Ownership is per-user; chatId is optional (an attachment can outlive
+// the chat it was first uploaded for). Cascade delete on the user
+// collapses the metadata row, but the on-disk content survives until
+// the GC job (TODO post-6.D) removes blobs with refcount 0.
+// ────────────────────────────────────────────────────────────────────────
+export const attachments = sqliteTable(
+  "attachments",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    chatId: text("chat_id").references(() => chats.id, { onDelete: "set null" }),
+    filename: text("filename").notNull(),
+    mimeType: text("mime_type").notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    sha256: text("sha256").notNull(),
+    storagePath: text("storage_path").notNull(),
+    createdAt: integer("created_at").notNull().default(sql`(unixepoch() * 1000)`),
+  },
+  (t) => ({
+    userIdx: index("ix_attachments_user").on(t.userId),
+    chatIdx: index("ix_attachments_chat").on(t.chatId),
+    sha256Idx: index("ix_attachments_sha256").on(t.sha256),
+  }),
+);
