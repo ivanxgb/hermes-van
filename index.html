@@ -668,7 +668,7 @@
     <div class="container">
       <div class="hero-pill">
         <span class="dot"></span>
-        <span>v0.1.0 · Phase 5 en marcha (5.A · 5.B · 5.C ✅) · web push & deploy próximos</span>
+        <span>v0.1.0 · Phase 5 en marcha (5.A · 5.B · 5.C · 5.D.1 ✅) · deploy próximo</span>
       </div>
       <h1>
         Cliente web autenticado para Hermes Agent.<br>
@@ -971,13 +971,12 @@
       <div class="progress-card">
         <div class="progress-header">
           <span class="progress-label">— progreso global</span>
-          <span class="progress-pct">82%</span>
+          <span class="progress-pct">88%</span>
         </div>
-        <div class="progress-track"><div class="progress-fill" style="width: 82%;"></div></div>
+        <div class="progress-track"><div class="progress-fill" style="width: 88%;"></div></div>
         <div class="progress-meta">
-          <span><strong>4</strong> fases ✅ · <strong>Phase 5</strong> en marcha (3/4 sub-phases)</span>
-          <span>actualizado: <strong>2026-05-30</strong></span>
-          <span>siguiente: <strong>5.D — deploy en hermes.vintek.io + web push</strong></span>
+          <span><strong>4</strong> fases ✅ · <strong>Phase 5</strong> en marcha (4/5 sub-phases)</span>
+          <span>siguiente: <strong>5.D.2 — deploy artifacts (nginx + systemd + Certbot)</strong></span>
         </div>
       </div>
 
@@ -1107,7 +1106,7 @@
           </div>
           <div class="phase-content">
             <h3>Polish + producción</h3>
-            <p class="phase-tagline">Mobile UX, security panel, backups, deploy en hermes.vintek.io con TLS y monitoring. 31/31 e2e green tras 5.A + 5.B.</p>
+            <p class="phase-tagline">Mobile UX, security panel, backups, web push, deploy en hermes.vintek.io con TLS y monitoring. 35/35 e2e green tras 5.D.1.</p>
             <ul class="phase-tasks">
               <li class="done">5.A — Mobile drawer + shortcuts overlay (?, ⌘/, Esc layered)</li>
               <li class="done">5.A — iOS no-zoom composer + 40px touch targets + ellipsis title</li>
@@ -1117,8 +1116,12 @@
               <li class="done">5.B — Settings page rewrite: sessions panel + audit log</li>
               <li class="done">5.C — Backups encriptados (sqlcipher checkpoint+copy) con round-trip + integrity_check</li>
               <li class="done">5.C — Test pnpm vitest: 64/64 unit (incluye verifica que key incorrecta falla)</li>
-              <li>5.D — nginx + Certbot + systemd-run en hermes.vintek.io</li>
-              <li>Web push notifications (VAPID) — server keys + subscribe endpoint</li>
+              <li class="done">5.D.1 — Web Push backend (VAPID): public-key, subscribe, unsubscribe, test</li>
+              <li class="done">5.D.1 — push_subscriptions scoped per-user + cascade delete + 410-removal dispatch</li>
+              <li class="done">5.D.1 — service worker (sw.js) + Settings UI con enable/test/disable</li>
+              <li class="done">5.D.1 — pnpm hermes-van:vapid keypair generator + 11 unit + 4 e2e tests (75/75 + 35/35)</li>
+              <li>5.D.2 — nginx config + systemd unit + Certbot stub (deploy artifacts)</li>
+              <li>5.E — deploy real en hermes.vintek.io</li>
               <li>HSTS preload submission</li>
               <li>Pentesting interno informal</li>
               <li>Alertas a Telegram on incidents</li>
