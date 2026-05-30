@@ -62,24 +62,31 @@ export function _resetRateLimits(): void {
   buckets.clear();
 }
 
+// In dev/test the rate limits would chew through legitimate Playwright
+// runs in seconds (8+ user registrations per suite > 10/h cap). The
+// Phase 1 thresholds remain canonical for production; we relax them
+// off-prod so e2e doesn't fight the rate limiter.
+const isProd = process.env["NODE_ENV"] === "production";
+const PROD_TO_DEV_MULT = isProd ? 1 : 100;
+
 export const RATE_LIMITS = {
   loginPerIp: {
-    limit: 5,
+    limit: 5 * PROD_TO_DEV_MULT,
     windowMs: 15 * 60 * 1000, // 15 min
     blockMs: 15 * 60 * 1000,
   } satisfies RateLimitConfig,
   loginPerUser: {
-    limit: 10,
+    limit: 10 * PROD_TO_DEV_MULT,
     windowMs: 60 * 60 * 1000, // 1 hour
     blockMs: 30 * 60 * 1000,
   } satisfies RateLimitConfig,
   recoveryPerIp: {
-    limit: 3,
+    limit: 3 * PROD_TO_DEV_MULT,
     windowMs: 60 * 60 * 1000, // 1 hour
     blockMs: 60 * 60 * 1000,
   } satisfies RateLimitConfig,
   setupPerIp: {
-    limit: 10,
+    limit: 10 * PROD_TO_DEV_MULT,
     windowMs: 60 * 60 * 1000,
     blockMs: 60 * 60 * 1000,
   } satisfies RateLimitConfig,

@@ -29,9 +29,11 @@ describe("rateCheck", () => {
     expect(r.retryAfterMs).toBeLessThanOrEqual(5000);
   });
 
-  it("RATE_LIMITS contains expected keys", () => {
-    expect(RATE_LIMITS.loginPerIp.limit).toBe(5);
-    expect(RATE_LIMITS.recoveryPerIp.limit).toBe(3);
-    expect(RATE_LIMITS.setupPerIp.limit).toBe(10);
+  it("RATE_LIMITS contains expected keys (off-prod uses dev multiplier)", () => {
+    // ratelimit.ts relaxes thresholds 100x outside production so e2e
+    // doesn't fight the limiter. Vitest runs with NODE_ENV=test → relaxed.
+    expect(RATE_LIMITS.loginPerIp.limit).toBe(500);
+    expect(RATE_LIMITS.recoveryPerIp.limit).toBe(300);
+    expect(RATE_LIMITS.setupPerIp.limit).toBe(1000);
   });
 });
