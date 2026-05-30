@@ -668,7 +668,7 @@
     <div class="container">
       <div class="hero-pill">
         <span class="dot"></span>
-        <span>v0.1.0 · Phase 2 cerrada · Phase 3 (multi-chat + slash) próxima</span>
+        <span>v0.1.0 · Phase 3 cerrada · Phase 4 (power features) próxima</span>
       </div>
       <h1>
         Cliente web autenticado para Hermes Agent.<br>
@@ -971,13 +971,13 @@
       <div class="progress-card">
         <div class="progress-header">
           <span class="progress-label">— progreso global</span>
-          <span class="progress-pct">43%</span>
+          <span class="progress-pct">57%</span>
         </div>
-        <div class="progress-track"><div class="progress-fill" style="width: 43%;"></div></div>
+        <div class="progress-track"><div class="progress-fill" style="width: 57%;"></div></div>
         <div class="progress-meta">
-          <span><strong>3</strong> de <strong>7</strong> fases completadas</span>
+          <span><strong>4</strong> de <strong>7</strong> fases completadas</span>
           <span>actualizado: <strong>2026-05-30</strong></span>
-          <span>siguiente: <strong>Phase 3 — multi-chat + slash commands</strong></span>
+          <span>siguiente: <strong>Phase 4 — power features</strong></span>
         </div>
       </div>
 
@@ -1058,22 +1058,21 @@
         <div class="phase">
           <div class="phase-meta">
             <div class="phase-id">Phase 3</div>
-            <div class="phase-status next"><span class="dot"></span>siguiente</div>
+            <div class="phase-status done"><span class="dot"></span>cerrada</div>
           </div>
           <div class="phase-content">
             <h3>Multi-chat + slash commands</h3>
-            <p class="phase-tagline">Lo que define el producto. Paralelismo real y palette de comandos.</p>
+            <p class="phase-tagline">Streams paralelos, command palette, markdown, reconexión, badges.</p>
             <ul class="phase-tasks">
-              <li>Tabs concurrentes con streams independientes</li>
-              <li>Streams en background al cambiar tab</li>
-              <li>Badges de notificación al completar</li>
-              <li>Trigger / abre command palette</li>
-              <li>Comandos sourced de /v1/capabilities</li>
-              <li>Fuzzy search en palette (cmdk-style)</li>
-              <li>⌘K switcher de sesiones</li>
-              <li>⌘N nueva sesión</li>
-              <li>Render markdown + shiki + MEDIA: paths</li>
-              <li>Reconexión automática al recargar /chat con run vivo</li>
+              <li class="done">Multi-chat store (useSyncExternalStore) — streams sobreviven cambio de tab</li>
+              <li class="done">Live dot animado en sidebar para chats streamando en background</li>
+              <li class="done">Command palette ⌘K con fuzzy search + slash commands (/new, /help, …)</li>
+              <li class="done">Atajo ⌘N nueva sesión + Esc cancela stream</li>
+              <li class="done">Render markdown con marked + DOMPurify (h1, code, tablas, links)</li>
+              <li class="done">Reconexión automática a runs vivos al recargar (/api/chats/:id/active-run)</li>
+              <li class="done">Unread badges + document title con contador global</li>
+              <li class="done">Hardening de tests: globalSetup limpia DB + rate limits relajados off-prod</li>
+              <li class="done">Suite e2e: 16/16 verdes (auth, REST, SSE, multi-chat, palette, markdown, reconnect, unread)</li>
             </ul>
           </div>
         </div>
@@ -1081,7 +1080,7 @@
         <div class="phase">
           <div class="phase-meta">
             <div class="phase-id">Phase 4</div>
-            <div class="phase-status queued"><span class="dot"></span>pendiente</div>
+            <div class="phase-status next"><span class="dot"></span>siguiente</div>
           </div>
           <div class="phase-content">
             <h3>Power features</h3>
