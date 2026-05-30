@@ -27,6 +27,7 @@ import {
   useChat,
 } from "../lib/chat-store";
 import { renderMarkdown, hardenLinks } from "../lib/markdown";
+import { useScrollAnchor } from "../lib/scroll-anchor";
 import { CommandPalette } from "../components/CommandPalette";
 import { SearchPalette } from "../components/SearchPalette";
 import { VoiceInput } from "../components/VoiceInput";
@@ -60,7 +61,7 @@ export function ChatPage() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const scroll = useScrollAnchor();
 
   // Subscribe to the global change signal so badges update in real time.
   useAnyChatChange();
@@ -108,10 +109,14 @@ export function ChatPage() {
     document.title = total > 0 ? `(${total}) hermes-van` : "hermes-van";
   });
 
-  // Auto-scroll
+  // Auto-scroll, but only when the user is already at the bottom.
+  // This prevents streaming deltas from yanking the viewport away when
+  // they've scrolled up to re-read earlier turns.
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [focused.messages, focusedRun?.status]);
+    if (scroll.atBottom) {
+      scroll.scrollToBottom({ behavior: "smooth" });
+    }
+  }, [focused.messages, focusedRun?.status, scroll]);
 
   // Global keyboard shortcuts
   useEffect(() => {
@@ -522,8 +527,21 @@ export function ChatPage() {
                   </article>
                 ))
               )}
-              <div ref={messagesEndRef} />
+              <div ref={scroll.ref} />
             </section>
+
+            {scroll.scrolledFar && !scroll.atBottom ? (
+              <button
+                type="button"
+                className="jump-latest"
+                onClick={() => scroll.scrollToBottom({ behavior: "smooth" })}
+                data-testid="jump-latest"
+                aria-label="Jump to latest message"
+                title="Jump to latest"
+              >
+                ↓ latest
+              </button>
+            ) : null}
 
             {error ? <div className="error">{error}</div> : null}
 
