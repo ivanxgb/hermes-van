@@ -17,6 +17,12 @@ import {
   type AuditRecord,
 } from "../lib/api";
 import { logout, useAuth } from "../lib/auth-store";
+import {
+  THEMES,
+  readThemeId,
+  setTheme as applyAndPersistTheme,
+  type ThemeId,
+} from "../lib/theme";
 
 function fmtRelative(ts: number | null | undefined): string {
   if (!ts) return "—";
@@ -59,6 +65,15 @@ export function SettingsPage() {
   const [pushPublicKey, setPushPublicKey] = useState<string | null>(null);
   const [pushBusy, setPushBusy] = useState(false);
   const [pushNote, setPushNote] = useState<string | null>(null);
+
+  // Theme state. Lazily-initialized from localStorage so the picker
+  // always shows the actual active theme, not a fresh default.
+  const [themeId, setThemeId] = useState<ThemeId>(() => readThemeId());
+
+  function onThemeChange(id: ThemeId) {
+    applyAndPersistTheme(id);
+    setThemeId(id);
+  }
 
   async function refresh() {
     try {
@@ -429,6 +444,46 @@ export function SettingsPage() {
             {pushNote}
           </p>
         )}
+      </section>
+
+      <section data-testid="theme-section">
+        <h2 className="section-h">Theme</h2>
+        <p className="section-sub">
+          Color palette for the entire app. Persists across devices that
+          share this passkey but is stored locally per browser.
+        </p>
+        <ul className="cap-list" data-testid="theme-list">
+          {THEMES.map((t) => {
+            const active = t.id === themeId;
+            return (
+              <li
+                key={t.id}
+                className={active ? "cap-row active" : "cap-row"}
+                data-testid={`theme-row-${t.id}`}
+                style={{ cursor: "pointer" }}
+                onClick={() => onThemeChange(t.id)}
+              >
+                <div className="cap-main">
+                  <div className="cap-title">{t.label}</div>
+                  <div className="cap-sub">{t.blurb}</div>
+                </div>
+                <div className="cap-right">
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      display: "inline-block",
+                      width: 18,
+                      height: 18,
+                      border: "1px solid var(--border-strong)",
+                      background: t.vars["--accent"] ?? "var(--accent)",
+                    }}
+                  />
+                  {active && <span className="cap-badge">active</span>}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
       </section>
 
       <section className="danger-zone">

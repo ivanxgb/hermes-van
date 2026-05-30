@@ -1,7 +1,13 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
+import { bootTheme } from "./lib/theme";
 import "./index.css";
+
+// Apply the saved theme synchronously, BEFORE React mounts. This avoids
+// a flash of the default palette on cold load. bootTheme() is a no-op
+// when nothing is stored (default theme already matches the CSS).
+bootTheme();
 
 const rootEl = document.getElementById("root");
 if (!rootEl) throw new Error("Root element #root not found");
