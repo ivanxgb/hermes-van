@@ -159,3 +159,69 @@ export const auth = {
 export const sys = {
   health: () => api.get<HealthResponse>("/api/health"),
 };
+
+// ─── Chat shapes ────────────────────────────────────────────────────────
+
+export type MessageStatus =
+  | "pending"
+  | "streaming"
+  | "completed"
+  | "failed"
+  | "cancelled";
+
+export type MessageRole = "user" | "assistant" | "system" | "tool";
+
+export interface Chat {
+  id: string;
+  userId: string;
+  title: string;
+  gatewaySessionId: string;
+  model: string | null;
+  archivedAt: number | null;
+  lastMessageAt: number | null;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface Message {
+  id: string;
+  chatId: string;
+  userId: string;
+  role: MessageRole;
+  content: string;
+  runId: string | null;
+  status: MessageStatus;
+  error: string | null;
+  metadata: string | null;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface StartRunResponse {
+  run: { id: string; chatId: string; status: string; messageId: string };
+  userMessage: { id: string; role: string; content: string };
+  assistantMessage: { id: string; role: string; content: string; status: MessageStatus };
+}
+
+export const chats = {
+  list: (opts: { includeArchived?: boolean } = {}) => {
+    const qs = opts.includeArchived ? "?includeArchived=true" : "";
+    return api.get<{ chats: Chat[] }>(`/api/chats${qs}`);
+  },
+  create: (body: { title?: string; model?: string } = {}) =>
+    api.post<{ chat: Chat }>("/api/chats", body),
+  get: (id: string) => api.get<{ chat: Chat }>(`/api/chats/${id}`),
+  patch: (id: string, body: { title?: string; archived?: boolean }) =>
+    request<{ chat: Chat }>("PATCH", `/api/chats/${id}`, { body }),
+  delete: (id: string) => api.delete<{ ok: true }>(`/api/chats/${id}`),
+  messages: (id: string) =>
+    api.get<{ messages: Message[] }>(`/api/chats/${id}/messages`),
+  startRun: (id: string, body: { input: string; model?: string }) =>
+    api.post<StartRunResponse>(`/api/chats/${id}/runs`, body),
+};
+
+export const runs = {
+  stop: (runId: string) => api.post<{ ok: true }>(`/api/runs/${runId}/stop`),
+  approve: (runId: string, choice: "once" | "session" | "always" | "deny") =>
+    api.post<{ ok: true }>(`/api/runs/${runId}/approval`, { choice }),
+};
