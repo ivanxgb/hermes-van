@@ -20,7 +20,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node --env-file=.env --import tsx scripts/migrate.ts",
     "hermes-van:bootstrap": "node --env-file=.env --import tsx scripts/bootstrap.ts",
-    "hermes-van:backup": "node --env-file=.env --import tsx scripts/backup.ts"
+    "hermes-van:backup": "node --env-file=.env --import tsx scripts/backup.ts",
+    "hermes-van:vapid": "node --import tsx scripts/vapid.ts"
   },
   "dependencies": {
     "@hono/node-server": "^1.13.7",
@@ -28,6 +29,7 @@
     "@simplewebauthn/browser": "^11.0.0",
     "@simplewebauthn/server": "^11.0.0",
     "@simplewebauthn/types": "^11.0.0",
+    "@types/web-push": "^3.6.4",
     "better-sqlite3": "npm:better-sqlite3-multiple-ciphers@^12.0.0",
     "better-sqlite3-multiple-ciphers": "^12.0.0",
     "dompurify": "^3.4.7",
@@ -39,6 +41,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "ulid": "^2.3.0",
+    "web-push": "^3.6.7",
     "wouter": "^3.6.0",
     "zod": "^3.24.1"
   },

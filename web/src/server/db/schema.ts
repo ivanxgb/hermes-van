@@ -249,3 +249,32 @@ export const activeRuns = sqliteTable(
     upstreamIdx: index("ix_runs_upstream").on(t.upstreamRunId),
   }),
 );
+
+// ────────────────────────────────────────────────────────────────────────
+// push_subscriptions
+// Web Push (VAPID) subscriptions, scoped per user. The endpoint URL +
+// p256dh + auth keys come from PushManager.subscribe() in the browser
+// service worker. Stored as plain strings — they ARE secret-ish but
+// only useful to push to that one device, and they're rotated whenever
+// the user re-subscribes.
+// ────────────────────────────────────────────────────────────────────────
+export const pushSubscriptions = sqliteTable(
+  "push_subscriptions",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    endpoint: text("endpoint").notNull(),
+    p256dh: text("p256dh").notNull(),
+    auth: text("auth").notNull(),
+    userAgent: text("user_agent"),
+    createdAt: integer("created_at").notNull().default(sql`(unixepoch() * 1000)`),
+    lastSeenAt: integer("last_seen_at").notNull().default(sql`(unixepoch() * 1000)`),
+    failedCount: integer("failed_count").notNull().default(0),
+  },
+  (t) => ({
+    userIdx: index("ix_push_user").on(t.userId),
+    endpointIdx: index("ix_push_endpoint").on(t.endpoint),
+  }),
+);

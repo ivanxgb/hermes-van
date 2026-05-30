@@ -10,7 +10,12 @@
  */
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { auth as api, type WebSessionRecord, type AuditRecord } from "../lib/api";
+import {
+  auth as api,
+  push as pushApi,
+  type WebSessionRecord,
+  type AuditRecord,
+} from "../lib/api";
 import { logout, useAuth } from "../lib/auth-store";
 
 function fmtRelative(ts: number | null | undefined): string {
@@ -42,6 +47,19 @@ export function SettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
+  // Push state
+  type PushStatus =
+    | "loading"
+    | "unsupported"
+    | "disabled" // server has no VAPID keys
+    | "denied" // browser permission was denied
+    | "off"
+    | "on";
+  const [pushStatus, setPushStatus] = useState<PushStatus>("loading");
+  const [pushPublicKey, setPushPublicKey] = useState<string | null>(null);
+  const [pushBusy, setPushBusy] = useState(false);
+  const [pushNote, setPushNote] = useState<string | null>(null);
+
   async function refresh() {
     try {
       const [sRes, aRes] = await Promise.all([api.sessions(), api.audit(50)]);
@@ -52,8 +70,39 @@ export function SettingsPage() {
     }
   }
 
+  async function refreshPushStatus() {
+    if (
+      typeof window === "undefined" ||
+      !("serviceWorker" in navigator) ||
+      !("PushManager" in window)
+    ) {
+      setPushStatus("unsupported");
+      return;
+    }
+    try {
+      const keyRes = await pushApi.publicKey();
+      setPushPublicKey(keyRes.publicKey);
+    } catch (err) {
+      // 503 = not configured server-side. Treat as disabled.
+      setPushStatus("disabled");
+      return;
+    }
+    if (Notification.permission === "denied") {
+      setPushStatus("denied");
+      return;
+    }
+    try {
+      const reg = await navigator.serviceWorker.getRegistration("/sw.js");
+      const sub = await reg?.pushManager.getSubscription();
+      setPushStatus(sub ? "on" : "off");
+    } catch {
+      setPushStatus("off");
+    }
+  }
+
   useEffect(() => {
     void refresh();
+    void refreshPushStatus();
   }, []);
 
   async function onLogoutAll() {
@@ -84,6 +133,96 @@ export function SettingsPage() {
       setError(err instanceof Error ? err.message : "Revoke failed");
     } finally {
       setBusy(null);
+    }
+  }
+
+  // ── Push controls ───────────────────────────────────────────────────
+
+  function urlBase64ToUint8Array(b64: string): Uint8Array {
+    const padding = "=".repeat((4 - (b64.length % 4)) % 4);
+    const base64 = (b64 + padding).replace(/-/g, "+").replace(/_/g, "/");
+    const raw = atob(base64);
+    const out = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+    return out;
+  }
+
+  async function onPushEnable() {
+    if (!pushPublicKey) return;
+    setPushBusy(true);
+    setPushNote(null);
+    try {
+      const perm = await Notification.requestPermission();
+      if (perm !== "granted") {
+        setPushStatus(perm === "denied" ? "denied" : "off");
+        setPushNote("Permission was not granted.");
+        return;
+      }
+      const reg =
+        (await navigator.serviceWorker.getRegistration("/sw.js")) ??
+        (await navigator.serviceWorker.register("/sw.js"));
+      // Wait for activation if a fresh registration.
+      if (!reg.active) {
+        await new Promise<void>((resolve) => {
+          const sw = reg.installing ?? reg.waiting;
+          if (!sw) return resolve();
+          sw.addEventListener("statechange", () => {
+            if (sw.state === "activated") resolve();
+          });
+        });
+      }
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(pushPublicKey) as unknown as BufferSource,
+      });
+      const json = sub.toJSON();
+      await pushApi.subscribe({
+        endpoint: json.endpoint!,
+        keys: {
+          p256dh: json.keys!["p256dh"]!,
+          auth: json.keys!["auth"]!,
+        },
+      });
+      setPushStatus("on");
+      setPushNote("Push enabled on this device.");
+    } catch (err) {
+      setPushNote(err instanceof Error ? err.message : "Subscribe failed");
+    } finally {
+      setPushBusy(false);
+    }
+  }
+
+  async function onPushDisable() {
+    setPushBusy(true);
+    setPushNote(null);
+    try {
+      const reg = await navigator.serviceWorker.getRegistration("/sw.js");
+      const sub = await reg?.pushManager.getSubscription();
+      if (sub) {
+        await pushApi.unsubscribe(sub.endpoint).catch(() => {
+          // ignore — client-side unsubscribe still happens below
+        });
+        await sub.unsubscribe();
+      }
+      setPushStatus("off");
+      setPushNote("Push disabled on this device.");
+    } catch (err) {
+      setPushNote(err instanceof Error ? err.message : "Unsubscribe failed");
+    } finally {
+      setPushBusy(false);
+    }
+  }
+
+  async function onPushTest() {
+    setPushBusy(true);
+    setPushNote(null);
+    try {
+      const r = await pushApi.test();
+      setPushNote(`Sent ${r.sent}, failed ${r.failed}, removed ${r.removed}.`);
+    } catch (err) {
+      setPushNote(err instanceof Error ? err.message : "Test failed");
+    } finally {
+      setPushBusy(false);
     }
   }
 
@@ -210,6 +349,85 @@ export function SettingsPage() {
               </li>
             ))}
           </ul>
+        )}
+      </section>
+
+      <section data-testid="push-section">
+        <h2 className="section-h">Push notifications</h2>
+        <p className="section-sub">
+          Get a browser notification when a long run finishes. Works on
+          Chrome, Firefox, Edge, and recent Safari (iOS 16.4+ requires
+          installing the app to your home screen).
+        </p>
+        <div className="cap-row" style={{ alignItems: "center" }}>
+          <span className="cap-name">
+            status
+            <span
+              className={`cap-badge ${pushStatus === "on" ? "on" : "off"}`}
+              style={{ marginLeft: 8 }}
+              data-testid="push-status"
+            >
+              {pushStatus}
+            </span>
+          </span>
+          <div style={{ display: "flex", gap: 8 }}>
+            {pushStatus === "off" && (
+              <button
+                type="button"
+                className="btn-text"
+                onClick={() => void onPushEnable()}
+                disabled={pushBusy}
+                data-testid="push-enable"
+              >
+                {pushBusy ? "…" : "enable"}
+              </button>
+            )}
+            {pushStatus === "on" && (
+              <>
+                <button
+                  type="button"
+                  className="btn-text"
+                  onClick={() => void onPushTest()}
+                  disabled={pushBusy}
+                  data-testid="push-test"
+                >
+                  send test
+                </button>
+                <button
+                  type="button"
+                  className="btn-text"
+                  onClick={() => void onPushDisable()}
+                  disabled={pushBusy}
+                  data-testid="push-disable"
+                >
+                  disable
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+        {pushStatus === "disabled" && (
+          <p className="section-sub" data-testid="push-disabled-note">
+            Server has no VAPID keys configured. Run{" "}
+            <code>pnpm hermes-van:vapid</code> and paste the output into
+            <code>.env</code>.
+          </p>
+        )}
+        {pushStatus === "denied" && (
+          <p className="section-sub" data-testid="push-denied-note">
+            Browser permission was denied. Re-enable it from your browser
+            site settings.
+          </p>
+        )}
+        {pushStatus === "unsupported" && (
+          <p className="section-sub">
+            Push API isn't available in this browser.
+          </p>
+        )}
+        {pushNote && (
+          <p className="section-sub" data-testid="push-note">
+            {pushNote}
+          </p>
         )}
       </section>
 

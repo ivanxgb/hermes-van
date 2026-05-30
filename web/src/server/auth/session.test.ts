@@ -25,6 +25,7 @@ const env: Env = {
   HERMES_VAN_PORT: 3015,
   HERMES_VAN_HOST: "127.0.0.1",
   HERMES_VAN_LOG_LEVEL: "info",
+  HERMES_VAN_VAPID_SUBJECT: "mailto:noreply@hermes-van.local",
 };
 const SECRET = env.HERMES_VAN_SESSION_SECRET;
 

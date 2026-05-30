@@ -46,6 +46,15 @@ const schema = z
     HERMES_VAN_LOG_LEVEL: z
       .enum(["fatal", "error", "warn", "info", "debug", "trace"])
       .default("info"),
+
+    // Web Push (VAPID). Optional in dev — push features no-op when
+    // unset. Public/private keys are base64url; subject is mailto: or https:.
+    HERMES_VAN_VAPID_PUBLIC: z.string().min(1).optional(),
+    HERMES_VAN_VAPID_PRIVATE: z.string().min(1).optional(),
+    HERMES_VAN_VAPID_SUBJECT: z
+      .string()
+      .regex(/^(mailto:|https:\/\/)/, "VAPID subject must be mailto: or https:// URL")
+      .default("mailto:noreply@hermes-van.local"),
   })
   .superRefine((data, ctx) => {
     // Defense in depth: never accept default placeholder secrets in production

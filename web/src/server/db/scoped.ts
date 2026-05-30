@@ -37,6 +37,8 @@ type NewWebSession = typeof schema.webSessions.$inferInsert;
 type RecoveryCode = typeof schema.recoveryCodes.$inferSelect;
 type NewRecoveryCode = typeof schema.recoveryCodes.$inferInsert;
 type AuditEvent = typeof schema.auditLog.$inferSelect;
+type PushSubscription = typeof schema.pushSubscriptions.$inferSelect;
+type NewPushSubscription = typeof schema.pushSubscriptions.$inferInsert;
 type Chat = typeof schema.chats.$inferSelect;
 type NewChat = typeof schema.chats.$inferInsert;
 type Message = typeof schema.messages.$inferSelect;
@@ -252,6 +254,87 @@ export class ScopedDb {
         q = q.limit(opts.limit) as typeof q;
       }
       return q.all();
+    },
+  };
+
+  // ── push subscriptions ──
+  pushSubscriptions = {
+    list: (): PushSubscription[] => {
+      return this.db
+        .select()
+        .from(schema.pushSubscriptions)
+        .where(eq(schema.pushSubscriptions.userId, this.userId))
+        .all();
+    },
+
+    byEndpoint: (endpoint: string): PushSubscription | undefined => {
+      return this.db
+        .select()
+        .from(schema.pushSubscriptions)
+        .where(
+          and(
+            eq(schema.pushSubscriptions.userId, this.userId),
+            eq(schema.pushSubscriptions.endpoint, endpoint),
+          ),
+        )
+        .get();
+    },
+
+    upsert: (data: Omit<NewPushSubscription, "userId">): PushSubscription => {
+      const existing = this.pushSubscriptions.byEndpoint(data.endpoint);
+      if (existing) {
+        this.db
+          .update(schema.pushSubscriptions)
+          .set({
+            p256dh: data.p256dh,
+            auth: data.auth,
+            userAgent: data.userAgent ?? existing.userAgent,
+            lastSeenAt: Date.now(),
+            failedCount: 0,
+          })
+          .where(
+            and(
+              eq(schema.pushSubscriptions.userId, this.userId),
+              eq(schema.pushSubscriptions.id, existing.id),
+            ),
+          )
+          .run();
+        const refreshed = this.pushSubscriptions.byEndpoint(data.endpoint);
+        if (!refreshed) throw new Error("Upsert verification failed");
+        return refreshed;
+      }
+      const row: NewPushSubscription = { ...data, userId: this.userId };
+      this.db.insert(schema.pushSubscriptions).values(row).run();
+      const inserted = this.pushSubscriptions.byEndpoint(data.endpoint);
+      if (!inserted) throw new Error("Insert verification failed");
+      return inserted;
+    },
+
+    deleteByEndpoint: (endpoint: string): void => {
+      this.db
+        .delete(schema.pushSubscriptions)
+        .where(
+          and(
+            eq(schema.pushSubscriptions.userId, this.userId),
+            eq(schema.pushSubscriptions.endpoint, endpoint),
+          ),
+        )
+        .run();
+    },
+
+    incrementFail: (id: string): void => {
+      this.db
+        .update(schema.pushSubscriptions)
+        .set({
+          failedCount: sql`${schema.pushSubscriptions.failedCount} + 1`,
+        })
+        .where(
+          and(
+            eq(schema.pushSubscriptions.userId, this.userId),
+            eq(schema.pushSubscriptions.id, id),
+          ),
+        )
+        .run();
     },
   };
 

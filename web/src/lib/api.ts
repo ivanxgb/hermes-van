@@ -304,3 +304,24 @@ export const gateway = {
       `/api/gateway/chats/${chatId}/fork`,
     ),
 };
+
+// ─── Web Push ──────────────────────────────────────────────────────────
+
+export interface PushTestResponse {
+  ok: true;
+  sent: number;
+  failed: number;
+  removed: number;
+}
+
+export const push = {
+  publicKey: () => api.get<{ publicKey: string }>("/api/push/public-key"),
+  subscribe: (sub: { endpoint: string; keys: { p256dh: string; auth: string } }) =>
+    api.post<{ ok: true; subscription: { id: string; endpoint: string; createdAt: number } }>(
+      "/api/push/subscribe",
+      sub,
+    ),
+  unsubscribe: (endpoint: string) =>
+    api.post<{ ok: true }>("/api/push/unsubscribe", { endpoint }),
+  test: () => api.post<PushTestResponse>("/api/push/test"),
+};
