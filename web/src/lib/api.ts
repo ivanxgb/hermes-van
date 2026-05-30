@@ -253,7 +253,25 @@ export const chats = {
         startedAt: number;
       } | null;
     }>(`/api/chats/${id}/active-run`),
+  search: (q: string, opts: { limit?: number; chatId?: string } = {}) => {
+    const params = new URLSearchParams({ q });
+    if (opts.limit !== undefined) params.set("limit", String(opts.limit));
+    if (opts.chatId) params.set("chatId", opts.chatId);
+    return api.get<{ results: SearchResult[] }>(
+      `/api/chats/_search?${params.toString()}`,
+    );
+  },
 };
+
+export interface SearchResult {
+  id: string;
+  chatId: string;
+  role: "user" | "assistant" | "system" | "tool";
+  content: string;
+  snippet: string;
+  status: MessageStatus;
+  createdAt: number;
+}
 
 export const runs = {
   stop: (runId: string) => api.post<{ ok: true }>(`/api/runs/${runId}/stop`),

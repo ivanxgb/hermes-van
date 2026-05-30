@@ -28,6 +28,7 @@ import {
 } from "../lib/chat-store";
 import { renderMarkdown, hardenLinks } from "../lib/markdown";
 import { CommandPalette } from "../components/CommandPalette";
+import { SearchPalette } from "../components/SearchPalette";
 import { VoiceInput } from "../components/VoiceInput";
 import { FileAttachButton } from "../components/FileAttachButton";
 
@@ -55,6 +56,7 @@ export function ChatPage() {
   const [input, setInput] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
@@ -126,6 +128,11 @@ export function ChatPage() {
         setPaletteOpen((p) => !p);
         return;
       }
+      if (meta && e.shiftKey && e.key.toLowerCase() === "f") {
+        e.preventDefault();
+        setSearchOpen((p) => !p);
+        return;
+      }
       if (meta && e.key.toLowerCase() === "n") {
         e.preventDefault();
         void onNewChat();
@@ -146,6 +153,10 @@ export function ChatPage() {
           setShortcutsOpen(false);
           return;
         }
+        if (searchOpen) {
+          setSearchOpen(false);
+          return;
+        }
         if (sidebarOpen) {
           setSidebarOpen(false);
           return;
@@ -161,7 +172,7 @@ export function ChatPage() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusedRun?.status, paletteOpen, shortcutsOpen, sidebarOpen]);
+  }, [focusedRun?.status, paletteOpen, searchOpen, shortcutsOpen, sidebarOpen]);
 
   // ── actions ──
 
@@ -575,6 +586,35 @@ export function ChatPage() {
         }}
       />
 
+      <SearchPalette
+        open={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        chats={chatList}
+        onSelect={(chatId, messageId) => {
+          setSelectedId(chatId);
+          // The target message may not be in the DOM yet (chat switch +
+          // store re-render). Poll up to 1.5s, then scroll + flash.
+          const start = Date.now();
+          function tryFocus() {
+            const node = document.querySelector(
+              `[data-testid="msg-${CSS.escape(messageId)}"]`,
+            );
+            if (node instanceof HTMLElement) {
+              node.scrollIntoView({ behavior: "smooth", block: "center" });
+              node.classList.add("msg-flash");
+              window.setTimeout(() => node.classList.remove("msg-flash"), 1800);
+              return;
+            }
+            if (Date.now() - start < 1500) {
+              window.setTimeout(tryFocus, 80);
+            }
+          }
+          requestAnimationFrame(() => requestAnimationFrame(tryFocus));
+        }}
+      />
+
+
+
       {shortcutsOpen && (
         <div
           className="palette-overlay"
@@ -600,6 +640,7 @@ export function ChatPage() {
             </div>
             <ul className="shortcuts-list">
               <li><kbd>⌘</kbd> <kbd>K</kbd><span>command palette</span></li>
+              <li><kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>F</kbd><span>search messages</span></li>
               <li><kbd>⌘</kbd> <kbd>N</kbd><span>new chat</span></li>
               <li><kbd>⌘</kbd> <kbd>/</kbd><span>toggle this overlay</span></li>
               <li><kbd>?</kbd><span>show shortcuts</span></li>

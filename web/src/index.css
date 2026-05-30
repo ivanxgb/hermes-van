@@ -1126,6 +1126,82 @@ code {
   color: var(--text-muted);
 }
 
+/* ── SEARCH PALETTE ──────────────── */
+.search-palette {
+  width: min(720px, 92vw);
+}
+
+.search-list {
+  max-height: 60vh;
+}
+
+.search-item {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  padding: 10px 20px;
+}
+
+.search-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+}
+
+.search-role {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  padding: 1px 6px;
+  font-size: 10px;
+}
+
+.search-role-user { color: var(--accent); border-color: var(--accent); }
+.search-role-assistant { color: var(--text); }
+.search-role-tool { color: var(--text-dim); }
+.search-role-system { color: var(--warn); border-color: var(--warn); }
+
+.search-title {
+  color: var(--text-muted);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-snippet {
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.search-snippet mark {
+  background: rgba(0, 255, 102, 0.18);
+  color: var(--accent);
+  padding: 0 2px;
+  border-radius: 2px;
+}
+
+/* Flash highlight when jumping to a message from search */
+@keyframes msg-flash {
+  0%   { background: rgba(0, 255, 102, 0.0); }
+  20%  { background: rgba(0, 255, 102, 0.18); }
+  100% { background: rgba(0, 255, 102, 0.0); }
+}
+.msg-flash {
+  animation: msg-flash 1.8s ease-out;
+}
+
 /* ── APPROVAL CALLOUT ──────────────── */
 .approval-callout {
   margin: 16px 28px 0;
