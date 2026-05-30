@@ -668,7 +668,7 @@
     <div class="container">
       <div class="hero-pill">
         <span class="dot"></span>
-        <span>v0.1.0 · Phase 5 en marcha (5.A + 5.B ✅) · backups & deploy próximos</span>
+        <span>v0.1.0 · Phase 5 en marcha (5.A · 5.B · 5.C ✅) · web push & deploy próximos</span>
       </div>
       <h1>
         Cliente web autenticado para Hermes Agent.<br>
@@ -971,13 +971,13 @@
       <div class="progress-card">
         <div class="progress-header">
           <span class="progress-label">— progreso global</span>
-          <span class="progress-pct">78%</span>
+          <span class="progress-pct">82%</span>
         </div>
-        <div class="progress-track"><div class="progress-fill" style="width: 78%;"></div></div>
+        <div class="progress-track"><div class="progress-fill" style="width: 82%;"></div></div>
         <div class="progress-meta">
-          <span><strong>4</strong> fases ✅ · <strong>Phase 5</strong> en marcha (2/4 sub-phases)</span>
+          <span><strong>4</strong> fases ✅ · <strong>Phase 5</strong> en marcha (3/4 sub-phases)</span>
           <span>actualizado: <strong>2026-05-30</strong></span>
-          <span>siguiente: <strong>5.C — backups + deploy en hermes.vintek.io</strong></span>
+          <span>siguiente: <strong>5.D — deploy en hermes.vintek.io + web push</strong></span>
         </div>
       </div>
 
@@ -1115,9 +1115,10 @@
               <li class="done">5.B — /auth/sessions/:id/revoke per-session (cookies clear si es current)</li>
               <li class="done">5.B — /auth/audit?limit=N con metadata JSON-parsed</li>
               <li class="done">5.B — Settings page rewrite: sessions panel + audit log</li>
-              <li>5.C — Backups encriptados de DB con round-trip test</li>
+              <li class="done">5.C — Backups encriptados (sqlcipher checkpoint+copy) con round-trip + integrity_check</li>
+              <li class="done">5.C — Test pnpm vitest: 64/64 unit (incluye verifica que key incorrecta falla)</li>
               <li>5.D — nginx + Certbot + systemd-run en hermes.vintek.io</li>
-              <li>Web push notifications (VAPID)</li>
+              <li>Web push notifications (VAPID) — server keys + subscribe endpoint</li>
               <li>HSTS preload submission</li>
               <li>Pentesting interno informal</li>
               <li>Alertas a Telegram on incidents</li>
