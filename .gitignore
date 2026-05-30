@@ -5,3 +5,18 @@ node_modules/
 *.log
 .vscode/
 .idea/
+
+# build artifacts
+dist/
+.vinxi/
+.output/
+
+# data
+data/
+*.db
+*.db-wal
+*.db-shm
+
+# coverage
+coverage/
+
