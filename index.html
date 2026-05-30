@@ -668,7 +668,7 @@
     <div class="container">
       <div class="hero-pill">
         <span class="dot"></span>
-        <span>v0.1.0 · Phase 5 (5.A · 5.B · 5.C · 5.D · 5.F · 5.G · 5.H ✅) · sólo deploy real pendiente (DNS)</span>
+        <span>v0.1.0 · Phase 5 (5.A · 5.B · 5.C · 5.D · 5.F · 5.G · 5.H · 5.I ✅) · sólo deploy real pendiente (DNS)</span>
       </div>
       <h1>
         Cliente web autenticado para Hermes Agent.<br>
@@ -971,11 +971,11 @@
       <div class="progress-card">
         <div class="progress-header">
           <span class="progress-label">— progreso global</span>
-          <span class="progress-pct">98%</span>
+          <span class="progress-pct">99%</span>
         </div>
-        <div class="progress-track"><div class="progress-fill" style="width: 98%;"></div></div>
+        <div class="progress-track"><div class="progress-fill" style="width: 99%;"></div></div>
         <div class="progress-meta">
-          <span><strong>4</strong> fases ✅ · <strong>Phase 5</strong> en marcha (8/9 sub-phases)</span>
+          <span><strong>4</strong> fases ✅ · <strong>Phase 5</strong> en marcha (9/10 sub-phases)</span>
           <span>último: <strong>5.E — deploy real (bloqueado en DNS de hermes.vintek.io)</strong></span>
         </div>
       </div>
@@ -1128,6 +1128,9 @@
               <li class="done">5.G — webhook alerts on security incidents (Slack/Discord/Telegram/Hermes-compatible) + 9 unit tests</li>
               <li class="done">5.H — CI workflow (lint-typecheck + vitest + playwright) en deploy/ci/, activable cuando PAT tenga workflow scope</li>
               <li class="done">5.H — fix prod /sw.js + /favicon.ico + SPA fallback servidos vía @hono/node-server/serve-static</li>
+              <li class="done">5.I — backup retention configurable (HERMES_VAN_BACKUP_RETENTION, default 14) + naming-safe pruning</li>
+              <li class="done">5.I — pnpm hermes-van:restore con preflights (key match + integrity_check), pre-restore snapshot, rename atómico, sidecars limpiados</li>
+              <li class="done">5.I — 6 unit tests workspace-aislados (retention/naming/--output/round-trip/snapshot/key-mismatch) + systemd timer template diario en deploy/README.md</li>
               <li>5.E — deploy real en hermes.vintek.io (bloqueado en DNS)</li>
               <li>HSTS preload submission (post-deploy)</li>
             </ul>
