@@ -1,0 +1,59 @@
+# hermes-van — user-scope systemd unit.
+#
+# Runs as the unprivileged user (no root). Combine with linger:
+#
+#   sudo loginctl enable-linger <user>
+#
+# Install:
+#   mkdir -p ~/.config/systemd/user
+#   cp deploy/systemd/hermes-van.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now hermes-van
+#   systemctl --user status hermes-van
+#
+# Tail logs:
+#   journalctl --user -u hermes-van -f
+#
+# Restart after a code change:
+#   git pull && pnpm install --frozen-lockfile && systemctl --user restart hermes-van
+
+[Unit]
+Description=hermes-van web client (Hono + Vite production server)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/projects/hermes-van/web
+# Use absolute path to pnpm — systemd doesn't read your shell profile.
+# Adjust if pnpm lives elsewhere (which pnpm).
+ExecStart=/usr/bin/env pnpm hermes-van:start
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=15s
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hermes-van
+
+# Hardening (user-scope unit — most security= directives are no-ops
+# without root, so we keep the ones that still apply).
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=%h/projects/hermes-van/web/data %h/projects/hermes-van/web/backups
+ProtectHome=tmpfs
+BindReadOnlyPaths=%h/projects/hermes-van
+BindPaths=%h/projects/hermes-van/web/data %h/projects/hermes-van/web/backups
+LockPersonality=true
+RestrictRealtime=true
+RestrictNamespaces=true
+SystemCallArchitectures=native
+
+# Resource ceilings — adjust for your VPS.
+MemoryMax=512M
+CPUQuota=100%
+
+[Install]
+WantedBy=default.target

@@ -9,7 +9,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "start": "NODE_ENV=production node dist/server/index.js",
+    "start": "node --env-file=.env --import tsx src/server/main.ts",
+    "hermes-van:start": "node --env-file=.env --import tsx src/server/main.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --max-warnings=0",
     "format": "prettier --write .",
