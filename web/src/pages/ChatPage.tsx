@@ -31,6 +31,7 @@ import { CommandPalette } from "../components/CommandPalette";
 import { SearchPalette } from "../components/SearchPalette";
 import { VoiceInput } from "../components/VoiceInput";
 import { FileAttachButton } from "../components/FileAttachButton";
+import { CopyButton } from "../components/CopyButton";
 
 function MessageBody({ content, streaming }: { content: string; streaming: boolean }) {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -503,7 +504,12 @@ export function ChatPage() {
                     data-role={m.role}
                     data-status={m.status}
                   >
-                    <div className="msg-role">{m.role}</div>
+                    <div className="msg-head">
+                      <span className="msg-role">{m.role}</span>
+                      {m.status === "completed" && m.content ? (
+                        <CopyButton text={m.content} testId={`copy-${m.id}`} />
+                      ) : null}
+                    </div>
                     <div className="msg-body">
                       <MessageBody
                         content={m.content}

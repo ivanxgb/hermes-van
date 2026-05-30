@@ -638,6 +638,14 @@ code {
   border-left-color: var(--danger);
 }
 
+.msg-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
 .msg-role {
   font-family: "JetBrains Mono", monospace;
   font-size: 11px;
@@ -652,6 +660,42 @@ code {
   color: var(--text);
   font-size: 14px;
   line-height: 1.6;
+}
+
+.btn-copy {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 2px 8px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.msg:hover .btn-copy,
+.btn-copy:focus-visible,
+.btn-copy-copied,
+.btn-copy-failed {
+  opacity: 1;
+}
+
+.btn-copy:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+.btn-copy-copied {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.btn-copy-failed {
+  color: var(--danger);
+  border-color: var(--danger);
 }
 
 .msg-error {
