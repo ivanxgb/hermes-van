@@ -55,6 +55,17 @@ const schema = z
       .string()
       .regex(/^(mailto:|https:\/\/)/, "VAPID subject must be mailto: or https:// URL")
       .default("mailto:noreply@hermes-van.local"),
+
+    // Security incident alert webhook. When set, hermes-van POSTs a
+    // JSON payload on high-severity audit events (login bruteforce,
+    // recovery failures, mass session revoke, etc). Compatible with
+    // Slack, Discord, Telegram bot proxies, and the Hermes gateway's
+    // own webhook ingress. Optional — if unset, alerts are dropped.
+    HERMES_VAN_ALERT_WEBHOOK: z
+      .string()
+      .url()
+      .optional(),
+    HERMES_VAN_ALERT_BEARER: z.string().min(1).optional(),
   })
   .superRefine((data, ctx) => {
     // Defense in depth: never accept default placeholder secrets in production
