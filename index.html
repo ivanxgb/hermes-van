@@ -668,7 +668,7 @@
     <div class="container">
       <div class="hero-pill">
         <span class="dot"></span>
-        <span>v0.1.0 · Phase 3 cerrada · Phase 4 (power features) próxima</span>
+        <span>v0.1.0 · Phase 4 cerrada · Phase 5 (polish + producción) próxima</span>
       </div>
       <h1>
         Cliente web autenticado para Hermes Agent.<br>
@@ -971,13 +971,13 @@
       <div class="progress-card">
         <div class="progress-header">
           <span class="progress-label">— progreso global</span>
-          <span class="progress-pct">57%</span>
+          <span class="progress-pct">71%</span>
         </div>
-        <div class="progress-track"><div class="progress-fill" style="width: 57%;"></div></div>
+        <div class="progress-track"><div class="progress-fill" style="width: 71%;"></div></div>
         <div class="progress-meta">
-          <span><strong>4</strong> de <strong>7</strong> fases completadas</span>
+          <span><strong>5</strong> de <strong>7</strong> fases completadas</span>
           <span>actualizado: <strong>2026-05-30</strong></span>
-          <span>siguiente: <strong>Phase 4 — power features</strong></span>
+          <span>siguiente: <strong>Phase 5 — polish + producción</strong></span>
         </div>
       </div>
 
@@ -1080,20 +1080,22 @@
         <div class="phase">
           <div class="phase-meta">
             <div class="phase-id">Phase 4</div>
-            <div class="phase-status next"><span class="dot"></span>siguiente</div>
+            <div class="phase-status done"><span class="dot"></span>cerrada</div>
           </div>
           <div class="phase-content">
             <h3>Power features</h3>
-            <p class="phase-tagline">Skills browser, cron UI, aprobaciones, fork.</p>
+            <p class="phase-tagline">Approval inline, search FTS5, export markdown, capabilities browser, jobs viewer, fork de chat. 25/25 e2e verdes.</p>
             <ul class="phase-tasks">
-              <li>Panel de skills (/v1/skills)</li>
-              <li>Toolsets toggle (/v1/toolsets)</li>
-              <li>Switch de modelo en vivo</li>
-              <li>Cron jobs UI completo</li>
-              <li>Run approval flow inline</li>
-              <li>Fork de sesión con un click</li>
-              <li>Search FTS5 en historial</li>
-              <li>Export sesión a markdown</li>
+              <li class="done">Approval flow inline — callout con comando + once/session/always/deny</li>
+              <li class="done">Search FTS5 sobre messages — tabla virtual + scoping por chatId + snippets</li>
+              <li class="done">Export sesión a markdown con metadata + filename slugificado</li>
+              <li class="done">Capabilities browser — /v1/skills + /v1/toolsets read-only (100 skills, 26 toolsets)</li>
+              <li class="done">Jobs viewer — /api/jobs con schedule, next/last run, status, toolsets</li>
+              <li class="done">Fork de chat con un click — /api/sessions/:id/fork + chat local nuevo</li>
+              <li class="done">Proxy server-side: la gateway key nunca llega al browser</li>
+              <li class="done">Slash commands: /capabilities, /jobs, /fork integrados en ⌘K</li>
+              <li class="done">Switch de modelo descartado (gateway expone solo "Hermes Agent")</li>
+              <li class="done">Suite e2e: 25/25 verdes en 1.6m (auth + REST + SSE + multi-chat + palette + reconnect + unread + approval + search + export + capabilities + jobs + fork)</li>
             </ul>
           </div>
         </div>
@@ -1101,7 +1103,7 @@
         <div class="phase">
           <div class="phase-meta">
             <div class="phase-id">Phase 5</div>
-            <div class="phase-status queued"><span class="dot"></span>pendiente</div>
+            <div class="phase-status next"><span class="dot"></span>siguiente</div>
           </div>
           <div class="phase-content">
             <h3>Polish + producción</h3>
