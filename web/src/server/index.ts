@@ -15,6 +15,7 @@ import { chatRunRoutes, runRoutes } from "./routes/runs";
 import { gatewayRoutes } from "./routes/gateway";
 import { pushRoutes } from "./routes/push";
 import { uploadRoutes } from "./routes/uploads";
+import { metricsRoutes } from "./routes/metrics";
 import { authRequired } from "./middleware";
 import { securityHeaders } from "./middleware";
 import { loadEnv } from "./lib/env";
@@ -80,6 +81,9 @@ app.route("/api/push", pushRoutes);
 
 // /api/uploads/* — file attachments (Phase 6.D)
 app.route("/api/uploads", uploadRoutes);
+
+// /api/metrics/* — usage + cost dashboard (Phase 6.G)
+app.route("/api/metrics", metricsRoutes);
 
 // /api/me convenience proxy: requires auth
 app.get("/api/me", authRequired, async (c) => {

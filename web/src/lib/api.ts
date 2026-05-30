@@ -373,3 +373,40 @@ export const uploads = {
     api.delete<{ ok: true; gcRemovedBlob: boolean }>(`/api/uploads/${id}`),
   rawUrl: (id: string) => `/api/uploads/${id}/raw`,
 };
+
+// ─── Metrics (Phase 6.G) ───────────────────────────────────────────
+export interface UsageSummaryDto {
+  totals: {
+    messages: number;
+    promptTokens: number;
+    completionTokens: number;
+    estUsd: number;
+    pricelessRows: number;
+  };
+  byModel: Array<{
+    model: string;
+    messages: number;
+    promptTokens: number;
+    completionTokens: number;
+    estUsd: number;
+  }>;
+  byChat: Array<{
+    chatId: string;
+    title: string;
+    model: string | null;
+    messages: number;
+    promptTokens: number;
+    completionTokens: number;
+    estUsd: number;
+  }>;
+  byDay: Array<{
+    date: string;
+    promptTokens: number;
+    completionTokens: number;
+    estUsd: number;
+  }>;
+}
+
+export const metrics = {
+  usage: () => api.get<UsageSummaryDto>("/api/metrics/usage"),
+};

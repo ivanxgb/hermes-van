@@ -4,6 +4,7 @@ import { SetupPage } from "./pages/SetupPage";
 import { LoginPage } from "./pages/LoginPage";
 import { ChatPage } from "./pages/ChatPage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { MetricsPage } from "./pages/MetricsPage";
 import { CapabilitiesPage } from "./pages/CapabilitiesPage";
 import { JobsPage } from "./pages/JobsPage";
 import { bootstrapAuth, useAuth } from "./lib/auth-store";
@@ -46,6 +47,7 @@ export function App() {
       <Route path="/login" component={LoginPage} />
       <Route path="/chat" component={ChatPage} />
       <Route path="/settings" component={SettingsPage} />
+      <Route path="/metrics" component={MetricsPage} />
       <Route path="/capabilities" component={CapabilitiesPage} />
       <Route path="/jobs" component={JobsPage} />
       <Route>
