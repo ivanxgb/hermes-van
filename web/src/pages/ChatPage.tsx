@@ -299,16 +299,26 @@ export function ChatPage() {
               <h2 className="chat-title-lg" data-testid="active-chat-title">
                 {selectedChat.title}
               </h2>
-              {streaming ? (
-                <button
-                  className="btn-secondary btn-sm"
-                  type="button"
-                  onClick={onStop}
-                  data-testid="stop-btn"
+              <div className="chat-head-actions">
+                {streaming ? (
+                  <button
+                    className="btn-secondary btn-sm"
+                    type="button"
+                    onClick={onStop}
+                    data-testid="stop-btn"
+                  >
+                    stop
+                  </button>
+                ) : null}
+                <a
+                  className="btn-text"
+                  href={`/api/chats/${selectedChat.id}/export.md`}
+                  data-testid="export-md"
+                  title="Export this chat as markdown"
                 >
-                  stop
-                </button>
-              ) : null}
+                  export.md
+                </a>
+              </div>
             </header>
 
             {focusedRun?.pendingApproval ? (

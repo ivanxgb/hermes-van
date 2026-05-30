@@ -232,6 +232,62 @@ chatRoutes.get("/:id/messages", async (c) => {
   return c.json({ messages });
 });
 
+// ─── Export markdown ────────────────────────────────────────────────────
+// Plain-text dump of the chat for archiving. We strip pending/streaming
+// rows because they're not user-visible final content.
+
+chatRoutes.get("/:id/export.md", async (c) => {
+  const user = c.get("user");
+  if (!user) return c.json({ error: "Unauthenticated" }, 401);
+
+  const idResult = idParam.safeParse(c.req.param("id"));
+  if (!idResult.success) return c.json({ error: "Invalid id" }, 400);
+
+  const scoped = forUser(getDb(), user.id);
+  const chat = scoped.chats.byId(idResult.data);
+  if (!chat) return c.json({ error: "Chat not found" }, 404);
+
+  const messages = scoped.messages
+    .listForChat(idResult.data)
+    .filter(
+      (m) =>
+        (m.role === "user" || m.role === "assistant") &&
+        m.status === "completed" &&
+        m.content.length > 0,
+    );
+
+  const lines: string[] = [];
+  lines.push(`# ${chat.title}`);
+  lines.push("");
+  lines.push(`> Exported from hermes-van — ${new Date().toISOString()}`);
+  lines.push(`> Chat: \`${chat.id}\` · Messages: ${messages.length}`);
+  if (chat.model) lines.push(`> Model: \`${chat.model}\``);
+  lines.push("");
+  lines.push("---");
+  lines.push("");
+
+  for (const m of messages) {
+    const heading = m.role === "user" ? "## You" : "## Assistant";
+    lines.push(heading);
+    lines.push("");
+    lines.push(m.content);
+    lines.push("");
+  }
+
+  const body = lines.join("\n");
+  // Best-effort filename: lowercase title, alphanumerics + dashes only.
+  const slug = chat.title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60) || "chat";
+  const filename = `${slug}-${chat.id.slice(-8)}.md`;
+
+  c.header("Content-Type", "text/markdown; charset=utf-8");
+  c.header("Content-Disposition", `attachment; filename="${filename}"`);
+  return c.body(body);
+});
+
 // ─── Active run for a chat ──────────────────────────────────────────────
 // Returns the single in-flight run (if any) so a page reload can resume
 // streaming via the SSE proxy. We do not expose upstreamRunId — the
