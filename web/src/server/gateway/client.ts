@@ -71,6 +71,32 @@ export async function createRun(input: CreateRunInput): Promise<CreateRunRespons
   return { runId: parsed.run_id, status: parsed.status ?? "started" };
 }
 
+/** GET /v1/skills — list all skills available on the gateway. */
+export async function listSkills(): Promise<Array<Record<string, unknown>>> {
+  const env = loadEnv();
+  const res = await fetch(`${env.HERMES_VAN_GATEWAY_URL}/v1/skills`, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${env.HERMES_VAN_GATEWAY_KEY}` },
+  });
+  const text = await res.text();
+  if (!res.ok) throw new GatewayError(res.status, text);
+  const parsed = JSON.parse(text) as { data?: Array<Record<string, unknown>> };
+  return parsed.data ?? [];
+}
+
+/** GET /v1/toolsets — list toolsets and which are enabled. */
+export async function listToolsets(): Promise<Array<Record<string, unknown>>> {
+  const env = loadEnv();
+  const res = await fetch(`${env.HERMES_VAN_GATEWAY_URL}/v1/toolsets`, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${env.HERMES_VAN_GATEWAY_KEY}` },
+  });
+  const text = await res.text();
+  if (!res.ok) throw new GatewayError(res.status, text);
+  const parsed = JSON.parse(text) as { data?: Array<Record<string, unknown>> };
+  return parsed.data ?? [];
+}
+
 /** POST /v1/runs/{run_id}/stop */
 export async function stopRun(upstreamRunId: string): Promise<void> {
   const env = loadEnv();

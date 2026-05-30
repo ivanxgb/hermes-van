@@ -12,6 +12,7 @@ import { logger as honoLogger } from "hono/logger";
 import { authRoutes } from "./auth/routes";
 import { chatRoutes } from "./routes/chats";
 import { chatRunRoutes, runRoutes } from "./routes/runs";
+import { gatewayRoutes } from "./routes/gateway";
 import { authRequired } from "./middleware";
 import { securityHeaders } from "./middleware";
 import { loadEnv } from "./lib/env";
@@ -68,6 +69,9 @@ app.route("/api/chats/:id/runs", chatRunRoutes);
 
 // /api/runs/:runId/* — SSE events, stop, approval
 app.route("/api/runs", runRoutes);
+
+// /api/gateway/* — read-only capability proxies (skills, toolsets)
+app.route("/api/gateway", gatewayRoutes);
 
 // /api/me convenience proxy: requires auth
 app.get("/api/me", authRequired, async (c) => {

@@ -278,6 +278,14 @@ export function ChatPage() {
         </nav>
         <div className="sidebar-foot">
           <span className="username">{auth.user?.username}</span>
+          <button
+            className="btn-text"
+            type="button"
+            onClick={() => setLocation("/capabilities")}
+            data-testid="nav-capabilities"
+          >
+            capabilities
+          </button>
           <button className="btn-text" type="button" onClick={() => setLocation("/settings")}>
             settings
           </button>
@@ -437,6 +445,7 @@ export function ChatPage() {
         onSlash={(slash) => {
           if (slash === "/new") void onNewChat();
           else if (slash === "/settings") setLocation("/settings");
+          else if (slash === "/capabilities") setLocation("/capabilities");
           else if (slash === "/logout") void onLogout();
           else if (slash === "/help") {
             alert(

@@ -936,3 +936,115 @@ code {
   background: var(--surface-2);
   font-weight: 600;
 }
+
+/* ─── Capabilities page ──────────────────────────────────────────────── */
+.cap-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 16px 0 12px;
+  border-bottom: 1px solid var(--border);
+}
+.cap-tab {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  padding: 8px 14px;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  letter-spacing: 0.02em;
+}
+.cap-tab:hover { color: var(--fg); }
+.cap-tab.active {
+  color: var(--fg);
+  border-bottom-color: var(--accent, #c2410c);
+}
+.cap-filter {
+  width: 100%;
+  background: var(--surface);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 13px;
+  margin-bottom: 16px;
+  outline: none;
+}
+.cap-filter:focus { border-color: var(--accent, #c2410c); }
+.cap-group { margin-bottom: 22px; }
+.cap-group-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  margin-bottom: 8px;
+  border-bottom: 1px dashed var(--border);
+  padding-bottom: 4px;
+}
+.cap-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cap-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 10px 12px;
+}
+.cap-item.disabled { opacity: 0.55; }
+.cap-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+.cap-name {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--fg);
+}
+.cap-desc {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 4px;
+  line-height: 1.5;
+}
+.cap-badge {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 2px 8px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+}
+.cap-badge.on { background: rgba(34, 197, 94, 0.12); border-color: rgba(34, 197, 94, 0.4); color: #4ade80; }
+.cap-badge.off { background: var(--surface-2); color: var(--muted); }
+.cap-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+}
+.cap-tool {
+  font-size: 11px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  padding: 2px 6px;
+  border-radius: 3px;
+  color: var(--muted);
+}
+.empty { color: var(--muted); font-size: 13px; }
+.error-box {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 4px;
+  padding: 12px;
+  margin-top: 16px;
+}

@@ -51,6 +51,7 @@ const SLASH_COMMANDS = [
   { name: "/help", desc: "Show keyboard shortcuts" },
   { name: "/model", desc: "Change model for the current chat (TODO)" },
   { name: "/settings", desc: "Open settings" },
+  { name: "/capabilities", desc: "Browse skills and toolsets" },
   { name: "/logout", desc: "Sign out" },
 ];
 

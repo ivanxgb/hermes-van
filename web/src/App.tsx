@@ -4,6 +4,7 @@ import { SetupPage } from "./pages/SetupPage";
 import { LoginPage } from "./pages/LoginPage";
 import { ChatPage } from "./pages/ChatPage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { CapabilitiesPage } from "./pages/CapabilitiesPage";
 import { bootstrapAuth, useAuth } from "./lib/auth-store";
 
 export function App() {
@@ -44,6 +45,7 @@ export function App() {
       <Route path="/login" component={LoginPage} />
       <Route path="/chat" component={ChatPage} />
       <Route path="/settings" component={SettingsPage} />
+      <Route path="/capabilities" component={CapabilitiesPage} />
       <Route>
         <main className="container">
           <div className="tag">— 404</div>

@@ -235,3 +235,25 @@ export const runs = {
   approve: (runId: string, choice: "once" | "session" | "always" | "deny") =>
     api.post<{ ok: true }>(`/api/runs/${runId}/approval`, { choice }),
 };
+
+// ─── Gateway capability shapes ─────────────────────────────────────────
+
+export interface SkillRecord {
+  name: string;
+  description?: string | null;
+  category?: string | null;
+}
+
+export interface ToolsetRecord {
+  name: string;
+  label?: string | null;
+  description?: string | null;
+  enabled?: boolean;
+  configured?: boolean;
+  tools?: string[];
+}
+
+export const gateway = {
+  skills: () => api.get<{ skills: SkillRecord[] }>("/api/gateway/skills"),
+  toolsets: () => api.get<{ toolsets: ToolsetRecord[] }>("/api/gateway/toolsets"),
+};
