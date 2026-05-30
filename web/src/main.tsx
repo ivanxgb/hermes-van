@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
+import { UpdateBanner } from "./components/UpdateBanner";
 import { bootTheme } from "./lib/theme";
 import "./index.css";
 
@@ -15,6 +16,7 @@ if (!rootEl) throw new Error("Root element #root not found");
 createRoot(rootEl).render(
   <StrictMode>
     <App />
+    <UpdateBanner />
   </StrictMode>,
 );
 
@@ -26,8 +28,15 @@ createRoot(rootEl).render(
 // the SW is live for offline-shell caching from the first visit.
 if (import.meta.env.PROD && "serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch(() => {
-      // Failed registration is non-fatal: the app still works online.
-    });
+    void navigator.serviceWorker
+      .register("/sw.js")
+      .then((reg) => {
+        // Poke the registration every 5 minutes — picks up new SW
+        // bytes without requiring the user to navigate.
+        setInterval(() => void reg.update().catch(() => {}), 5 * 60_000);
+      })
+      .catch(() => {
+        // Failed registration is non-fatal: the app still works online.
+      });
   });
 }

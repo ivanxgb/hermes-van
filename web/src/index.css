@@ -833,6 +833,48 @@ code {
   }
 }
 
+/* ── UPDATE BANNER ───────────────── */
+.update-banner {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: var(--bg-elev);
+  border: 1px solid var(--accent-dim);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+  color: var(--text);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+}
+
+.update-banner-text {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+}
+
+.update-banner-btn {
+  background: var(--accent);
+  color: var(--bg);
+  border: 0;
+  padding: 4px 10px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+
+.update-banner-btn:hover {
+  filter: brightness(1.1);
+}
+
 .composer textarea {
   background: var(--surface);
   border: 1px solid var(--border);

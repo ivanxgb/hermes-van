@@ -26,7 +26,16 @@ const env = loadEnv();
 // claim the whole origin), then the Hono routes (registered via
 // app.route() in src/server/index.ts), then a SPA fallback that serves
 // dist/index.html for any unmatched non-API route.
-app.use("/sw.js", serveStatic({ path: "./public/sw.js" }));
+//
+// sw.js is special: in production we want the post-build hash-injected
+// copy from dist/, not the raw template in public/. Fall back to public
+// for dev.
+app.use(
+  "/sw.js",
+  serveStatic({
+    path: existsSync("./dist/sw.js") ? "./dist/sw.js" : "./public/sw.js",
+  }),
+);
 app.use("/favicon.ico", serveStatic({ path: "./public/favicon.ico" }));
 app.use(
   "/manifest.webmanifest",

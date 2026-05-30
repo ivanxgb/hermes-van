@@ -28,7 +28,7 @@
  */
 /* global self, caches, fetch, Response */
 
-const CACHE_VERSION = "hermes-van-v1";
+const CACHE_VERSION = "hermes-van-__SW_BUILD_HASH__";
 const OFFLINE_FALLBACK_URL = "/";
 
 self.addEventListener("install", (event) => {
@@ -38,9 +38,17 @@ self.addEventListener("install", (event) => {
   event.waitUntil(
     (async () => {
       await caches.open(CACHE_VERSION);
-      await self.skipWaiting();
+      // Wait for an explicit message from the page before activating —
+      // this lets the UpdateBanner show the user a "new version
+      // available" prompt and only swap when they accept.
     })(),
   );
+});
+
+self.addEventListener("message", (event) => {
+  if (event && event.data && event.data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener("activate", (event) => {
