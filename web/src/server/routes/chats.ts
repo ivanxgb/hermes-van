@@ -195,3 +195,41 @@ chatRoutes.get("/:id/messages", async (c) => {
 
   return c.json({ messages });
 });
+
+// ─── Active run for a chat ──────────────────────────────────────────────
+// Returns the single in-flight run (if any) so a page reload can resume
+// streaming via the SSE proxy. We do not expose upstreamRunId — the
+// client only ever sees the local ULID.
+
+const ACTIVE_STATUSES = new Set([
+  "queued",
+  "running",
+  "waiting_for_approval",
+  "stopping",
+]);
+
+chatRoutes.get("/:id/active-run", async (c) => {
+  const user = c.get("user");
+  if (!user) return c.json({ error: "Unauthenticated" }, 401);
+
+  const idResult = idParam.safeParse(c.req.param("id"));
+  if (!idResult.success) return c.json({ error: "Invalid id" }, 400);
+
+  const scoped = forUser(getDb(), user.id);
+  const chat = scoped.chats.byId(idResult.data);
+  if (!chat) return c.json({ error: "Chat not found" }, 404);
+
+  const runs = scoped.activeRuns.listForChat(idResult.data);
+  const live = runs.find((r) => ACTIVE_STATUSES.has(r.status));
+  if (!live) return c.json({ run: null });
+
+  return c.json({
+    run: {
+      id: live.id,
+      chatId: live.chatId,
+      messageId: live.messageId,
+      status: live.status,
+      startedAt: live.startedAt,
+    },
+  });
+});

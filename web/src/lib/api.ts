@@ -218,6 +218,16 @@ export const chats = {
     api.get<{ messages: Message[] }>(`/api/chats/${id}/messages`),
   startRun: (id: string, body: { input: string; model?: string }) =>
     api.post<StartRunResponse>(`/api/chats/${id}/runs`, body),
+  activeRun: (id: string) =>
+    api.get<{
+      run: {
+        id: string;
+        chatId: string;
+        messageId: string;
+        status: string;
+        startedAt: number;
+      } | null;
+    }>(`/api/chats/${id}/active-run`),
 };
 
 export const runs = {

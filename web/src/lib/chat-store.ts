@@ -142,10 +142,46 @@ export async function loadChat(
   try {
     const { messages } = await chatsApi.messages(chatId);
     patch(chatId, (s) => ({ ...s, messages, lastFetchAt: Date.now() }));
+    // After hydrating messages, see if there's a live run on the server
+    // that we should re-attach our SSE stream to (e.g. user reloaded the
+    // page mid-stream, or opened the app in a new tab).
+    await reconnectIfLive(chatId);
   } catch (err) {
     // Surface via console; the UI will see stale messages but no crash.
     // eslint-disable-next-line no-console
     console.warn("loadChat failed", err);
+  }
+}
+
+/**
+ * Probe the server for an in-flight run on this chat. If one exists and
+ * we don't already have an EventSource open for it, reattach so the
+ * client picks up tokens from where the agent currently is.
+ *
+ * The agent itself lives in the gateway and continues running while
+ * the browser is offline — this just rejoins its SSE stream.
+ */
+async function reconnectIfLive(chatId: string): Promise<void> {
+  // Skip if we're already wired up locally
+  if (eventSources.has(chatId)) return;
+  try {
+    const { run } = await chatsApi.activeRun(chatId);
+    if (!run) return;
+    patch(chatId, (s) => ({
+      ...s,
+      run: {
+        runId: run.id,
+        chatId: run.chatId,
+        messageId: run.messageId,
+        status: "streaming",
+        error: null,
+        startedAt: run.startedAt,
+      },
+    }));
+    openStream({ runId: run.id, chatId: run.chatId, messageId: run.messageId });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn("reconnectIfLive failed", err);
   }
 }
 
