@@ -22,6 +22,24 @@ import {
   useAnyChatChange,
   useChat,
 } from "../lib/chat-store";
+import { renderMarkdown, hardenLinks } from "../lib/markdown";
+import { CommandPalette } from "../components/CommandPalette";
+
+function MessageBody({ content, streaming }: { content: string; streaming: boolean }) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const html = useMemo(() => renderMarkdown(content), [content]);
+  useEffect(() => {
+    if (ref.current) hardenLinks(ref.current);
+  }, [html]);
+  if (!content) return <>{streaming ? "…" : ""}</>;
+  return (
+    <div
+      ref={ref}
+      className="md"
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  );
+}
 
 export function ChatPage() {
   const [, setLocation] = useLocation();
@@ -30,6 +48,7 @@ export function ChatPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   // Subscribe to the global change signal so badges update in real time.
@@ -68,6 +87,39 @@ export function ChatPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [focused.messages, focusedRun?.status]);
+
+  // Global keyboard shortcuts
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const meta = e.metaKey || e.ctrlKey;
+      // Don't fire when typing in an input/textarea (except for the explicit
+      // shortcut combos with Cmd/Ctrl which the user clearly meant).
+      const target = e.target as HTMLElement | null;
+      const inField =
+        target?.tagName === "INPUT" ||
+        target?.tagName === "TEXTAREA" ||
+        target?.isContentEditable;
+      if (meta && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setPaletteOpen((p) => !p);
+        return;
+      }
+      if (meta && e.key.toLowerCase() === "n") {
+        e.preventDefault();
+        void onNewChat();
+        return;
+      }
+      if (e.key === "Escape" && !paletteOpen) {
+        // Esc cancels an active stream when not in a field
+        if (!inField && focusedRun?.status === "streaming") {
+          void onStop();
+        }
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusedRun?.status, paletteOpen]);
 
   // ── actions ──
 
@@ -236,7 +288,10 @@ export function ChatPage() {
                   >
                     <div className="msg-role">{m.role}</div>
                     <div className="msg-body">
-                      {m.content || (m.status === "streaming" ? "…" : "")}
+                      <MessageBody
+                        content={m.content}
+                        streaming={m.status === "streaming"}
+                      />
                       {m.status === "failed" && m.error ? (
                         <div className="msg-error">error: {m.error}</div>
                       ) : null}
@@ -280,6 +335,30 @@ export function ChatPage() {
           </>
         )}
       </main>
+
+      <CommandPalette
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        chats={chatList}
+        onSelectChat={(id) => setSelectedId(id)}
+        onNewChat={onNewChat}
+        onSettings={() => setLocation("/settings")}
+        onLogout={onLogout}
+        onSlash={(slash) => {
+          if (slash === "/new") void onNewChat();
+          else if (slash === "/settings") setLocation("/settings");
+          else if (slash === "/logout") void onLogout();
+          else if (slash === "/help") {
+            alert(
+              "Shortcuts:\n  ⌘K  command palette\n  ⌘N  new chat\n  Enter  send\n  Shift+Enter  newline\n  Esc  cancel running stream",
+            );
+          } else if (slash === "/clear") {
+            if (selectedId) void onDeleteChat(selectedId).then(() => onNewChat());
+          } else {
+            alert(`${slash} is not implemented yet`);
+          }
+        }}
+      />
     </div>
   );
 }
