@@ -1162,6 +1162,7 @@
               <li class="done">6.G — Dashboard /metrics: catálogo de precios LLM (Anthropic/OpenAI/Mistral/DeepSeek/Llama) + summarizeUsage agregando totals/by-model/by-chat/last-30d</li>
               <li class="done">6.G — UI con KPIs + bars CSS (sin chart lib); priceless-warning cuando hay modelos fuera del catálogo + 12 unit + 3 e2e</li>
               <li class="done">perf — Lazy routes (Setup/Settings/Metrics/Capabilities/Jobs) + manualChunks vendor split: bundle principal 586KB → 429KB (-27%); warning de Vite eliminado</li>
+              <li class="done">/model — Slash command para cambiar modelo por chat: PATCH /api/chats/:id con scoped.setModel + 2 isolation tests; UX mínima (free-form prompt) refleja que el gateway no expone /v1/models</li>
               <li>Visualización del kanban orchestrator (requiere endpoints en gateway)</li>
               <li>Integración multi-perfil</li>
             </ul>
