@@ -1,46 +1,58 @@
-import { useEffect, useState } from "react";
-
-interface Health {
-  status: string;
-  service: string;
-  version: string;
-  time: string;
-}
+import { useEffect } from "react";
+import { Route, Switch, useLocation } from "wouter";
+import { SetupPage } from "./pages/SetupPage";
+import { LoginPage } from "./pages/LoginPage";
+import { ChatPage } from "./pages/ChatPage";
+import { SettingsPage } from "./pages/SettingsPage";
+import { bootstrapAuth, useAuth } from "./lib/auth-store";
 
 export function App() {
-  const [health, setHealth] = useState<Health | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const auth = useAuth();
+  const [location, setLocation] = useLocation();
 
   useEffect(() => {
-    fetch("/api/health")
-      .then((r) => r.json() as Promise<Health>)
-      .then(setHealth)
-      .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
+    bootstrapAuth();
   }, []);
 
-  return (
-    <main className="container">
-      <div className="tag">— hermes-van</div>
-      <h1>
-        Cliente web para Hermes Agent.
-        <br />
-        <span className="accent">Phase 1 — server skeleton montado.</span>
-      </h1>
-      <p className="lead">
-        Backend Hono respondiendo en <code>/api/health</code>. Auth, DB, chat y
-        multi-sesión llegan en milestones siguientes.
-      </p>
+  // Route guard
+  useEffect(() => {
+    if (auth.status === "loading") return;
+    const isPublic = location === "/setup" || location === "/login";
+    if (auth.status === "anonymous" && !isPublic) {
+      setLocation("/login");
+    } else if (auth.status === "authenticated" && location === "/login") {
+      setLocation("/chat");
+    } else if (auth.status === "authenticated" && location === "/") {
+      setLocation("/chat");
+    } else if (auth.status === "anonymous" && location === "/") {
+      setLocation("/login");
+    }
+  }, [auth.status, location, setLocation]);
 
-      <section className="probe">
-        <div className="probe-label">— health probe</div>
-        {error ? (
-          <pre className="probe-err">error: {error}</pre>
-        ) : health ? (
-          <pre className="probe-ok">{JSON.stringify(health, null, 2)}</pre>
-        ) : (
-          <div className="probe-loading">…probing</div>
-        )}
-      </section>
-    </main>
+  if (auth.status === "loading") {
+    return (
+      <main className="container">
+        <div className="tag">— hermes-van</div>
+        <div className="probe-loading">…initializing</div>
+      </main>
+    );
+  }
+
+  return (
+    <Switch>
+      <Route path="/setup" component={SetupPage} />
+      <Route path="/login" component={LoginPage} />
+      <Route path="/chat" component={ChatPage} />
+      <Route path="/settings" component={SettingsPage} />
+      <Route>
+        <main className="container">
+          <div className="tag">— 404</div>
+          <h1>Not found.</h1>
+          <p className="lead">
+            Unknown route: <code>{location}</code>
+          </p>
+        </main>
+      </Route>
+    </Switch>
   );
 }

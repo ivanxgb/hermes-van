@@ -1,41 +1,73 @@
+/* hermes-van — Dark Enterprise design tokens */
+
 :root {
   --bg: #050505;
-  --surface: #111;
+  --bg-elev: #0c0c0c;
+  --surface: #111111;
+  --surface-2: #161616;
   --border: #1f1f1f;
+  --border-strong: #2a2a2a;
   --text: #e8e8e8;
   --text-muted: #8a8a8a;
   --text-dim: #5a5a5a;
   --accent: #6e8eff;
+  --accent-dim: #3a4a8a;
   --success: #4ade80;
+  --warn: #fbbf24;
   --danger: #ef4444;
   --grid: rgba(255, 255, 255, 0.02);
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
 
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family:
+    "Inter",
+    -apple-system,
+    BlinkMacSystemFont,
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
   font-weight: 400;
   line-height: 1.65;
   -webkit-font-smoothing: antialiased;
-  background-image:
-    linear-gradient(var(--grid) 1px, transparent 1px),
+  -moz-osx-font-smoothing: grayscale;
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px),
     linear-gradient(90deg, var(--grid) 1px, transparent 1px);
   background-size: 48px 48px;
   background-attachment: fixed;
   min-height: 100vh;
 }
 
+code,
+pre,
+.mono {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, "Courier New", monospace;
+}
+
+#app {
+  min-height: 100vh;
+}
+
+/* ── LAYOUT ─────────────────────────── */
 .container {
   max-width: 720px;
   margin: 0 auto;
-  padding: 96px 32px;
+  padding: 64px 32px;
 }
 
 .tag {
-  font-family: "JetBrains Mono", monospace;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.15em;
@@ -44,32 +76,296 @@ body {
 }
 
 h1 {
-  font-size: 40px;
+  font-size: clamp(28px, 4vw, 40px);
   font-weight: 700;
   letter-spacing: -0.02em;
-  line-height: 1.08;
-  margin-bottom: 24px;
+  line-height: 1.1;
+  margin-bottom: 20px;
 }
 
-h1 .accent { color: var(--accent); }
-
-.lead {
-  font-size: 16px;
-  color: var(--text-muted);
-  max-width: 560px;
-  margin-bottom: 48px;
-}
-
-code {
-  font-family: "JetBrains Mono", monospace;
-  font-size: 0.9em;
+h1 .accent {
   color: var(--accent);
 }
 
-.probe {
+p.lead {
+  color: var(--text-muted);
+  font-size: 15px;
+  margin-bottom: 32px;
+  max-width: 580px;
+}
+
+code {
   background: var(--surface);
   border: 1px solid var(--border);
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 13px;
+  color: var(--accent);
+}
+
+/* ── FORMS ──────────────────────────── */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-width: 480px;
+  margin-top: 8px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field-label {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+}
+
+.field input {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 11px 14px;
+  font-size: 14px;
+  font-family: inherit;
+  border-radius: 0;
+  transition: border-color 150ms ease;
+  width: 100%;
+}
+
+.field input:focus {
+  outline: none;
+  border-color: var(--accent-dim);
+}
+
+.field input:invalid:not(:placeholder-shown) {
+  border-color: var(--danger);
+}
+
+/* ── BUTTONS ────────────────────────── */
+.btn-primary,
+.btn-secondary,
+.btn-danger,
+.btn-text {
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 11px 20px;
+  border: 1px solid;
+  cursor: pointer;
+  transition:
+    background 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease;
+  border-radius: 0;
+}
+
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  margin-top: 8px;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-dim);
+  border-color: var(--accent-dim);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: transparent;
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.btn-secondary:hover {
+  border-color: var(--text-muted);
+}
+
+.btn-danger {
+  background: transparent;
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.btn-danger:hover {
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.btn-text {
+  background: transparent;
+  border: none;
+  padding: 6px 10px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-family: "JetBrains Mono", monospace;
+}
+
+.btn-text:hover {
+  color: var(--text);
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+  flex-wrap: wrap;
+}
+
+/* ── ERROR ──────────────────────────── */
+.error {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-left: 2px solid var(--danger);
+  color: var(--danger);
+  padding: 10px 14px;
+  font-size: 13px;
+  font-family: "JetBrains Mono", monospace;
+}
+
+/* ── TABS ───────────────────────────── */
+.tabs {
+  display: flex;
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  margin-bottom: 28px;
+  width: fit-content;
+}
+
+.tab {
+  background: var(--surface);
+  border: none;
+  color: var(--text-muted);
+  padding: 10px 20px;
+  font-size: 13px;
+  font-family: "JetBrains Mono", monospace;
+  cursor: pointer;
+  transition: color 150ms ease;
+}
+
+.tab:hover {
+  color: var(--text);
+}
+
+.tab.active {
+  color: var(--accent);
+}
+
+/* ── RECOVERY CODES ─────────────────── */
+.codes {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--success);
+  padding: 20px;
+  margin-top: 24px;
+  font-size: 14px;
+  font-family: "JetBrains Mono", monospace;
+  white-space: pre;
+  color: var(--success);
+  overflow-x: auto;
+  letter-spacing: 0.04em;
+}
+
+/* ── TOPBAR ─────────────────────────── */
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.topbar-right {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.username {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  margin-right: 8px;
+}
+
+/* ── KV TABLE ───────────────────────── */
+.kv-table {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  margin: 24px 0;
+}
+
+.kv-row {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 16px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+}
+
+.kv-row:last-child {
+  border-bottom: none;
+}
+
+.kv-key {
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 10px;
+}
+
+.kv-val {
+  color: var(--text);
+  word-break: break-all;
+}
+
+/* ── DANGER ZONE ────────────────────── */
+.danger-zone {
+  background: linear-gradient(180deg, rgba(239, 68, 68, 0.04) 0%, transparent 100%);
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--danger);
   padding: 20px 24px;
+  margin: 32px 0;
+}
+
+.danger-label {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  color: var(--danger);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.danger-desc {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin-bottom: 16px;
+  max-width: 540px;
+}
+
+/* ── PROBE (chat placeholder) ───────── */
+.probe {
+  margin-top: 32px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 16px 20px;
 }
 
 .probe-label {
@@ -81,18 +377,41 @@ code {
   margin-bottom: 12px;
 }
 
-.probe-ok, .probe-err {
+.probe-loading {
+  color: var(--text-dim);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 13px;
+}
+
+.probe-ok,
+.probe-err {
   font-family: "JetBrains Mono", monospace;
   font-size: 12px;
   white-space: pre-wrap;
-  line-height: 1.6;
+  word-break: break-all;
+  margin: 0;
 }
 
-.probe-ok { color: var(--success); }
-.probe-err { color: var(--danger); }
+.probe-ok {
+  color: var(--text);
+}
 
-.probe-loading {
-  font-family: "JetBrains Mono", monospace;
-  font-size: 12px;
-  color: var(--text-dim);
+.probe-err {
+  color: var(--danger);
+}
+
+/* ── RESPONSIVE ─────────────────────── */
+@media (max-width: 600px) {
+  .container {
+    padding: 32px 20px;
+  }
+  .kv-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+  .topbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
 }
