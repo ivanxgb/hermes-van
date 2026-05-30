@@ -31,6 +31,12 @@ import { useScrollAnchor } from "../lib/scroll-anchor";
 import { estimateTokens, formatTokens } from "../lib/token-estimate";
 import { CommandPalette } from "../components/CommandPalette";
 import { SearchPalette } from "../components/SearchPalette";
+import {
+  SlashAutocomplete,
+  getSlashMatches,
+  type SlashMatch,
+} from "../components/SlashAutocomplete";
+import { SLASH_COMMANDS } from "../components/CommandPalette";
 import { VoiceInput } from "../components/VoiceInput";
 import { FileAttachButton } from "../components/FileAttachButton";
 import { CopyButton } from "../components/CopyButton";
@@ -62,6 +68,14 @@ export function ChatPage() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [slashActive, setSlashActive] = useState(0);
+  const slashMatches = useMemo<SlashMatch[]>(
+    () => (input.includes("\n") ? [] : getSlashMatches(input)),
+    [input],
+  );
+  useEffect(() => {
+    if (slashActive >= slashMatches.length) setSlashActive(0);
+  }, [slashMatches.length, slashActive]);
   const scroll = useScrollAnchor();
 
   // Subscribe to the global change signal so badges update in real time.
@@ -251,6 +265,15 @@ export function ChatPage() {
     e.preventDefault();
     if (!selectedId || !input.trim()) return;
     if (focusedRun && focusedRun.status === "streaming") return;
+    // If the entire input is a known slash command, execute it instead
+    // of sending it as a message to the gateway.
+    const trimmed = input.trim();
+    const exact = SLASH_COMMANDS.find((c) => c.name === trimmed);
+    if (exact) {
+      setInput("");
+      runSlash(exact.name);
+      return;
+    }
     setError(null);
     const text = input;
     setInput("");
@@ -262,6 +285,35 @@ export function ChatPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to start run");
     }
+  }
+
+  function runSlash(slash: string) {
+    if (slash === "/new") void onNewChat();
+    else if (slash === "/settings") setLocation("/settings");
+    else if (slash === "/capabilities") setLocation("/capabilities");
+    else if (slash === "/jobs") setLocation("/jobs");
+    else if (slash === "/fork") {
+      if (selectedId) void onForkChat(selectedId);
+    }
+    else if (slash === "/logout") void onLogout();
+    else if (slash === "/help") {
+      setShortcutsOpen(true);
+    } else if (slash === "/clear") {
+      if (selectedId) void onDeleteChat(selectedId).then(() => onNewChat());
+    } else if (slash === "/model") {
+      if (!selectedId) {
+        alert("Open a chat first to change its model.");
+        return;
+      }
+      void onChangeModel(selectedId);
+    } else {
+      alert(`${slash} is not implemented yet`);
+    }
+  }
+
+  function pickSlash(cmd: SlashMatch) {
+    setInput("");
+    runSlash(cmd.name);
   }
 
   async function onStop() {
@@ -553,10 +605,44 @@ export function ChatPage() {
             {error ? <div className="error">{error}</div> : null}
 
             <form className="composer" onSubmit={onSubmit}>
+              {slashMatches.length > 0 ? (
+                <SlashAutocomplete
+                  matches={slashMatches}
+                  active={slashActive}
+                  onPick={pickSlash}
+                  onHover={setSlashActive}
+                />
+              ) : null}
               <textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => {
+                  // Slash autocomplete keyboard handling — only when
+                  // matches are visible. Tab and Enter (without Shift)
+                  // commit; arrows navigate; Escape clears.
+                  if (slashMatches.length > 0) {
+                    if (e.key === "ArrowDown") {
+                      e.preventDefault();
+                      setSlashActive((i) => Math.min(slashMatches.length - 1, i + 1));
+                      return;
+                    }
+                    if (e.key === "ArrowUp") {
+                      e.preventDefault();
+                      setSlashActive((i) => Math.max(0, i - 1));
+                      return;
+                    }
+                    if (e.key === "Tab" || (e.key === "Enter" && !e.shiftKey)) {
+                      e.preventDefault();
+                      const cmd = slashMatches[slashActive];
+                      if (cmd) pickSlash(cmd);
+                      return;
+                    }
+                    if (e.key === "Escape") {
+                      e.preventDefault();
+                      setInput("");
+                      return;
+                    }
+                  }
                   if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
                     void onSubmit(e as unknown as React.FormEvent);
@@ -630,29 +716,7 @@ export function ChatPage() {
         onNewChat={onNewChat}
         onSettings={() => setLocation("/settings")}
         onLogout={onLogout}
-        onSlash={(slash) => {
-          if (slash === "/new") void onNewChat();
-          else if (slash === "/settings") setLocation("/settings");
-          else if (slash === "/capabilities") setLocation("/capabilities");
-          else if (slash === "/jobs") setLocation("/jobs");
-          else if (slash === "/fork") {
-            if (selectedId) void onForkChat(selectedId);
-          }
-          else if (slash === "/logout") void onLogout();
-          else if (slash === "/help") {
-            setShortcutsOpen(true);
-          } else if (slash === "/clear") {
-            if (selectedId) void onDeleteChat(selectedId).then(() => onNewChat());
-          } else if (slash === "/model") {
-            if (!selectedId) {
-              alert("Open a chat first to change its model.");
-              return;
-            }
-            void onChangeModel(selectedId);
-          } else {
-            alert(`${slash} is not implemented yet`);
-          }
-        }}
+        onSlash={runSlash}
       />
 
       <SearchPalette

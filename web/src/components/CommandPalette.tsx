@@ -45,7 +45,7 @@ function fuzzyMatch(haystack: string, needle: string): boolean {
 }
 
 /** Subset of CLI slash commands that map to web actions. */
-const SLASH_COMMANDS = [
+export const SLASH_COMMANDS = [
   { name: "/new", desc: "Start a new chat" },
   { name: "/clear", desc: "Clear current chat (delete & recreate)" },
   { name: "/help", desc: "Show keyboard shortcuts" },
