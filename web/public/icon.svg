@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="hermes-van">
+  <rect width="512" height="512" rx="96" fill="#0a0a0a"/>
+  <path d="M256 88 L432 184 L432 376 L256 472 L80 376 L80 184 Z" fill="none" stroke="#22c55e" stroke-width="14" stroke-linejoin="round" opacity="0.85"/>
+  <text x="256" y="312" font-family="-apple-system,BlinkMacSystemFont,Inter,system-ui,sans-serif" font-size="220" font-weight="700" text-anchor="middle" fill="#22c55e" letter-spacing="-8">hv</text>
+</svg>

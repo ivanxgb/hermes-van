@@ -92,6 +92,32 @@ test.runIf(HAS_ENV)(
       const swBody = await sw.text();
       expect(swBody).toContain("addEventListener");
       expect(swBody).toContain("push");
+      // Phase 6.A: SW must implement runtime caching, not just push.
+      expect(swBody, "SW must register a fetch handler for offline shell").toContain(
+        "fetch",
+      );
+      expect(swBody).toContain("CACHE_VERSION");
+
+      // 2b. /manifest.webmanifest — PWA manifest must be served and parse
+      //     as JSON with the expected shape.
+      const manifest = await fetch(`http://127.0.0.1:${port}/manifest.webmanifest`);
+      expect(manifest.status, "manifest must be served in prod").toBe(200);
+      const manifestJson = (await manifest.json()) as {
+        name?: string;
+        start_url?: string;
+        display?: string;
+        icons?: unknown[];
+      };
+      expect(manifestJson.name).toBe("hermes-van");
+      expect(manifestJson.start_url).toBe("/");
+      expect(manifestJson.display).toBe("standalone");
+      expect(Array.isArray(manifestJson.icons)).toBe(true);
+
+      // 2c. /icon.svg — referenced by the manifest, must exist.
+      const icon = await fetch(`http://127.0.0.1:${port}/icon.svg`);
+      expect(icon.status, "icon.svg referenced by manifest must exist").toBe(200);
+      const iconBody = await icon.text();
+      expect(iconBody).toContain("<svg");
 
       // 3. Security headers still applied to /api/health (regression).
       expect(health.headers.get("x-content-type-options")).toBe("nosniff");

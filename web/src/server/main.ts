@@ -28,6 +28,11 @@ const env = loadEnv();
 // dist/index.html for any unmatched non-API route.
 app.use("/sw.js", serveStatic({ path: "./public/sw.js" }));
 app.use("/favicon.ico", serveStatic({ path: "./public/favicon.ico" }));
+app.use(
+  "/manifest.webmanifest",
+  serveStatic({ path: "./public/manifest.webmanifest" }),
+);
+app.use("/icon.svg", serveStatic({ path: "./public/icon.svg" }));
 
 // Vite build output (run `pnpm build` first). If dist/ doesn't exist,
 // the prod server still works for the API but the SPA shell will 404 —
