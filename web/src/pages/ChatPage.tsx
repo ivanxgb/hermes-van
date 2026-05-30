@@ -223,7 +223,24 @@ export function ChatPage() {
         setSelectedId(null);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Delete failed");
+      setError(err instanceof Error ? err.message : "Failed to delete chat");
+    }
+  }
+
+  async function onRenameChat(id: string) {
+    const existing = chatList.find((c) => c.id === id);
+    const next = window.prompt(
+      "Rename chat",
+      existing?.title ?? "",
+    );
+    if (next === null) return;
+    const trimmed = next.trim();
+    if (!trimmed || trimmed === existing?.title) return;
+    try {
+      const { chat } = await chatsApi.patch(id, { title: trimmed });
+      setChatList((prev) => prev.map((c) => (c.id === id ? chat : c)));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to rename chat");
     }
   }
 
@@ -405,17 +422,34 @@ export function ChatPage() {
                       {unread}
                     </span>
                   ) : null}
-                  <button
-                    className="btn-ghost btn-xs"
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      void onDeleteChat(c.id);
-                    }}
-                    aria-label="Delete chat"
-                  >
-                    ×
-                  </button>
+                  <span className="chat-actions">
+                    <button
+                      className="btn-ghost btn-xs"
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void onRenameChat(c.id);
+                      }}
+                      aria-label="Rename chat"
+                      title="Rename"
+                      data-testid={`chat-rename-${c.id}`}
+                    >
+                      ✎
+                    </button>
+                    <button
+                      className="btn-ghost btn-xs"
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void onDeleteChat(c.id);
+                      }}
+                      aria-label="Delete chat"
+                      title="Delete"
+                      data-testid={`chat-delete-${c.id}`}
+                    >
+                      ×
+                    </button>
+                  </span>
                 </div>
               );
             })
