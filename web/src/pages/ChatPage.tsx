@@ -28,6 +28,7 @@ import {
 } from "../lib/chat-store";
 import { renderMarkdown, hardenLinks } from "../lib/markdown";
 import { useScrollAnchor } from "../lib/scroll-anchor";
+import { estimateTokens, formatTokens } from "../lib/token-estimate";
 import { CommandPalette } from "../components/CommandPalette";
 import { SearchPalette } from "../components/SearchPalette";
 import { VoiceInput } from "../components/VoiceInput";
@@ -592,6 +593,15 @@ export function ChatPage() {
                     );
                   }}
                 />
+                {input.trim().length > 0 ? (
+                  <span
+                    className="composer-tokens"
+                    data-testid="composer-tokens"
+                    title="Rough token estimate (chars/4 + CJK fallback)"
+                  >
+                    {formatTokens(estimateTokens(input))}
+                  </span>
+                ) : null}
                 <button
                   type="submit"
                   className="btn-primary"

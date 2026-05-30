@@ -736,6 +736,18 @@ code {
   }
 }
 
+/* ── COMPOSER TOKEN HINT ──────────────── */
+.composer-tokens {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  text-transform: lowercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  padding: 0 8px;
+  user-select: none;
+  white-space: nowrap;
+}
+
 .msg-error {
   margin-top: 8px;
   color: var(--danger);
