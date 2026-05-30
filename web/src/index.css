@@ -694,19 +694,156 @@ code {
   align-self: end;
 }
 
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  border: none;
+  z-index: 90;
+  cursor: pointer;
+  padding: 0;
+}
+
+.hamburger {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  width: 36px;
+  height: 36px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.hamburger span {
+  display: block;
+  width: 100%;
+  height: 1.5px;
+  background: var(--text);
+}
+.hamburger:hover { border-color: var(--border-strong); }
+.empty-state-hamburger {
+  display: none;
+  margin-bottom: 24px;
+  align-self: flex-start;
+}
+
 @media (max-width: 768px) {
   .chat-shell {
     grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr;
+    grid-template-rows: 1fr;
+    position: relative;
   }
   .sidebar {
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-    max-height: 220px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: min(85vw, 320px);
+    max-height: none;
+    border-right: 1px solid var(--border);
+    border-bottom: none;
+    z-index: 100;
+    transform: translateX(-100%);
+    transition: transform 0.18s ease-out;
+    background: var(--bg);
+  }
+  .chat-shell.sidebar-open .sidebar {
+    transform: translateX(0);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
+  }
+  .chat-shell.sidebar-open .sidebar-backdrop {
+    display: block;
   }
   .chat-main {
-    height: auto;
+    height: 100vh;
+    min-height: 0;
   }
+  .hamburger {
+    display: flex;
+  }
+  .empty-state-hamburger {
+    display: flex;
+  }
+  .chat-head {
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .chat-title-lg {
+    font-size: 16px;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .chat-head-actions {
+    flex-shrink: 0;
+  }
+  .composer textarea {
+    font-size: 16px; /* prevent iOS zoom */
+  }
+  .btn-text, .btn-primary, .btn-secondary {
+    min-height: 40px; /* touch targets */
+  }
+}
+
+/* ── SHORTCUTS OVERLAY ────────────── */
+.shortcuts-panel {
+  width: min(480px, 92vw);
+  background: var(--bg-elev);
+  border: 1px solid var(--border-strong);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+  padding: 20px;
+}
+.shortcuts-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px dashed var(--border);
+  padding-bottom: 12px;
+  margin-bottom: 14px;
+}
+.shortcuts-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.shortcuts-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.shortcuts-list li span {
+  color: var(--text-muted);
+  margin-left: 8px;
+}
+.shortcuts-list kbd {
+  font-family: inherit;
+  font-size: 12px;
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  border-radius: 3px;
+  padding: 3px 7px;
+  color: var(--text);
+  min-width: 24px;
+  text-align: center;
+}
+.shortcuts-foot {
+  border-top: 1px dashed var(--border);
+  padding-top: 10px;
+  margin-top: 14px;
+  font-size: 11px;
+  color: var(--text-dim);
 }
 
 /* ── COMMAND PALETTE ───────────────── */

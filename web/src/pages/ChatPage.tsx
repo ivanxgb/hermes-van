@@ -53,6 +53,8 @@ export function ChatPage() {
   const [input, setInput] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   // Subscribe to the global change signal so badges update in real time.
@@ -127,17 +129,37 @@ export function ChatPage() {
         void onNewChat();
         return;
       }
-      if (e.key === "Escape" && !paletteOpen) {
-        // Esc cancels an active stream when not in a field
-        if (!inField && focusedRun?.status === "streaming") {
-          void onStop();
+      if (meta && e.key === "/") {
+        e.preventDefault();
+        setShortcutsOpen((p) => !p);
+        return;
+      }
+      if ((e.key === "?" || (e.shiftKey && e.key === "/")) && !inField && !paletteOpen && !shortcutsOpen) {
+        e.preventDefault();
+        setShortcutsOpen(true);
+        return;
+      }
+      if (e.key === "Escape") {
+        if (shortcutsOpen) {
+          setShortcutsOpen(false);
+          return;
+        }
+        if (sidebarOpen) {
+          setSidebarOpen(false);
+          return;
+        }
+        if (!paletteOpen) {
+          // Esc cancels an active stream when not in a field
+          if (!inField && focusedRun?.status === "streaming") {
+            void onStop();
+          }
         }
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusedRun?.status, paletteOpen]);
+  }, [focusedRun?.status, paletteOpen, shortcutsOpen, sidebarOpen]);
 
   // ── actions ──
 
@@ -227,7 +249,14 @@ export function ChatPage() {
   const unreadCounts = getUnreadCounts();
 
   return (
-    <div className="chat-shell">
+    <div className={`chat-shell ${sidebarOpen ? "sidebar-open" : ""}`}>
+      <button
+        type="button"
+        className="sidebar-backdrop"
+        aria-label="Close sidebar"
+        onClick={() => setSidebarOpen(false)}
+        tabIndex={sidebarOpen ? 0 : -1}
+      />
       <aside className="sidebar" data-testid="chat-sidebar">
         <div className="sidebar-head">
           <span className="tag">— hermes-van</span>
@@ -251,7 +280,10 @@ export function ChatPage() {
                 <div
                   key={c.id}
                   className={`chat-row ${c.id === selectedId ? "active" : ""}`}
-                  onClick={() => setSelectedId(c.id)}
+                  onClick={() => {
+                    setSelectedId(c.id);
+                    setSidebarOpen(false);
+                  }}
                   data-testid={`chat-row-${c.id}`}
                   data-live={live ? "true" : "false"}
                   data-unread={unread}
@@ -318,12 +350,34 @@ export function ChatPage() {
       <main className="chat-main">
         {!selectedChat ? (
           <div className="empty-state">
+            <button
+              type="button"
+              className="hamburger empty-state-hamburger"
+              aria-label="Open chat list"
+              data-testid="hamburger-btn"
+              onClick={() => setSidebarOpen(true)}
+            >
+              <span></span>
+              <span></span>
+              <span></span>
+            </button>
             <h1>No chat selected.</h1>
             <p className="lead">Hit + new to start a conversation.</p>
           </div>
         ) : (
           <>
             <header className="chat-head">
+              <button
+                type="button"
+                className="hamburger"
+                aria-label="Open chat list"
+                data-testid="hamburger-btn"
+                onClick={() => setSidebarOpen(true)}
+              >
+                <span></span>
+                <span></span>
+                <span></span>
+              </button>
               <h2 className="chat-title-lg" data-testid="active-chat-title">
                 {selectedChat.title}
               </h2>
@@ -481,9 +535,7 @@ export function ChatPage() {
           }
           else if (slash === "/logout") void onLogout();
           else if (slash === "/help") {
-            alert(
-              "Shortcuts:\n  ⌘K  command palette\n  ⌘N  new chat\n  Enter  send\n  Shift+Enter  newline\n  Esc  cancel running stream",
-            );
+            setShortcutsOpen(true);
           } else if (slash === "/clear") {
             if (selectedId) void onDeleteChat(selectedId).then(() => onNewChat());
           } else {
@@ -491,6 +543,45 @@ export function ChatPage() {
           }
         }}
       />
+
+      {shortcutsOpen && (
+        <div
+          className="palette-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Keyboard shortcuts"
+          data-testid="shortcuts-overlay"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShortcutsOpen(false);
+          }}
+        >
+          <div className="shortcuts-panel">
+            <div className="shortcuts-head">
+              <span className="tag">— shortcuts</span>
+              <button
+                type="button"
+                className="btn-text"
+                onClick={() => setShortcutsOpen(false)}
+                aria-label="Close shortcuts"
+              >
+                ×
+              </button>
+            </div>
+            <ul className="shortcuts-list">
+              <li><kbd>⌘</kbd> <kbd>K</kbd><span>command palette</span></li>
+              <li><kbd>⌘</kbd> <kbd>N</kbd><span>new chat</span></li>
+              <li><kbd>⌘</kbd> <kbd>/</kbd><span>toggle this overlay</span></li>
+              <li><kbd>?</kbd><span>show shortcuts</span></li>
+              <li><kbd>Enter</kbd><span>send message</span></li>
+              <li><kbd>Shift</kbd> <kbd>Enter</kbd><span>newline in composer</span></li>
+              <li><kbd>Esc</kbd><span>close overlay / cancel stream / close sidebar</span></li>
+            </ul>
+            <div className="shortcuts-foot">
+              <span className="text-dim">slash commands: type / in palette</span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
