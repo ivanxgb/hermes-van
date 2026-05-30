@@ -1157,6 +1157,8 @@
               <li class="done">6.D.2 — Paperclip composer button: image/* → markdown image, otros → link; escape de markdown specials; auto-reset del input + 6 unit tests</li>
               <li class="done">6.E — Diff / patch view en mensajes (```diff y ```patch fences) con clasificador unified-diff puro + 13 unit tests</li>
               <li class="done">6.E — CSS tematizado: add/remove/hunk/meta/context con border-left por kind; hunk usa --accent así que tema activo se refleja en los diffs</li>
+              <li class="done">6.F — Search palette FTS5 (Cmd/Ctrl+Shift+F): debounce 200ms sobre /api/chats/_search, ranked snippets con [[…]] → &lt;mark&gt;, keyboard nav, idle/loading/error/empty states</li>
+              <li class="done">6.F — Backend ya existía (FTS5 virtual table + triggers AFTER INSERT/DELETE/UPDATE); frontend wiring + jump-to-message con poll-DOM (race con chat-store) + msg-flash keyframe + 10 unit + 1 e2e</li>
               <li class="done">6.G — Dashboard /metrics: catálogo de precios LLM (Anthropic/OpenAI/Mistral/DeepSeek/Llama) + summarizeUsage agregando totals/by-model/by-chat/last-30d</li>
               <li class="done">6.G — UI con KPIs + bars CSS (sin chart lib); priceless-warning cuando hay modelos fuera del catálogo + 12 unit + 3 e2e</li>
               <li>Visualización del kanban orchestrator (requiere endpoints en gateway)</li>
