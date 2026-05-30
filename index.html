@@ -1165,6 +1165,7 @@
               <li class="done">/model — Slash command para cambiar modelo por chat: PATCH /api/chats/:id con scoped.setModel + 2 isolation tests; UX mínima (free-form prompt) refleja que el gateway no expone /v1/models</li>
               <li class="done">copy-button — Botón hover-revealed por mensaje completed: dual-path (Clipboard API + textarea fallback para http://); transient "copied" / "failed" 1.2s + 4 unit tests</li>
               <li class="done">scroll-anchor — Smart auto-scroll: IntersectionObserver watch sobre sentinel; deltas streaming ya no rompen la posición del usuario; botón flotante "↓ latest" cuando scrolledFar (>2vh) + 6 unit tests</li>
+              <li class="done">token-estimate — Hint en composer (≈N tokens / ≈N.Nk tokens) con heurística chars/4 + CJK fallback; sin dependencias (gpt-tokenizer pesa 2MB); 7 unit tests</li>
               <li>Visualización del kanban orchestrator (requiere endpoints en gateway)</li>
               <li>Integración multi-perfil</li>
             </ul>
