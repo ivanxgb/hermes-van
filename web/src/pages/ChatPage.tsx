@@ -29,6 +29,7 @@ import {
 import { renderMarkdown, hardenLinks } from "../lib/markdown";
 import { useScrollAnchor } from "../lib/scroll-anchor";
 import { estimateTokens, formatTokens } from "../lib/token-estimate";
+import { deriveChatTitle } from "../lib/derive-title";
 import { CommandPalette } from "../components/CommandPalette";
 import { SearchPalette } from "../components/SearchPalette";
 import { ModelSelector } from "../components/ModelSelector";
@@ -297,6 +298,31 @@ export function ChatPage() {
     setError(null);
     const text = input;
     setInput("");
+
+    // Auto-name the chat from the first user message. We treat any chat
+    // that still has the default title ("New chat") and zero existing
+    // messages as un-named. The title is derived locally — first sentence
+    // up to ~60 chars — so there's no extra round-trip and it works even
+    // when the gateway is slow.
+    const currentChat = chatList.find((c) => c.id === selectedId);
+    const isUnnamed =
+      currentChat?.title === "New chat" && focused.messages.length === 0;
+    if (isUnnamed) {
+      const autoTitle = deriveChatTitle(text);
+      // Fire and forget — don't block the run on the rename. If it
+      // fails, the chat keeps "New chat" and the user can rename
+      // manually with the ✎ button.
+      void chatsApi
+        .patch(selectedId, { title: autoTitle })
+        .then(({ chat }) =>
+          setChatList((prev) =>
+            prev.map((c) => (c.id === selectedId ? chat : c)),
+          ),
+        )
+        .catch(() => {
+          /* non-fatal */
+        });
+    }
 
     try {
       await startChatRun(selectedId, text, { userId: auth.user?.userId ?? "" });
