@@ -49,7 +49,7 @@ const SLASH_COMMANDS = [
   { name: "/new", desc: "Start a new chat" },
   { name: "/clear", desc: "Clear current chat (delete & recreate)" },
   { name: "/help", desc: "Show keyboard shortcuts" },
-  { name: "/model", desc: "Change model for the current chat (TODO)" },
+  { name: "/model", desc: "Change model for the current chat" },
   { name: "/settings", desc: "Open settings" },
   { name: "/capabilities", desc: "Browse skills and toolsets" },
   { name: "/jobs", desc: "Browse scheduled cron jobs" },

@@ -402,6 +402,16 @@ export class ScopedDb {
         .run();
     },
 
+    setModel: (id: string, model: string | null): void => {
+      const existing = this.chats.byId(id);
+      assertOwnership(existing, this.userId);
+      this.db
+        .update(schema.chats)
+        .set({ model, updatedAt: Date.now() })
+        .where(and(eq(schema.chats.userId, this.userId), eq(schema.chats.id, id)))
+        .run();
+    },
+
     delete: (id: string): void => {
       const existing = this.chats.byId(id);
       assertOwnership(existing, this.userId);

@@ -146,10 +146,17 @@ const patchSchema = z
   .object({
     title: z.string().min(1).max(200).optional(),
     archived: z.boolean().optional(),
+    // null clears the model (falls back to gateway default for the next run);
+    // empty string is rejected so the UI can't send accidental whitespace.
+    model: z.union([z.string().min(1).max(120), z.null()]).optional(),
   })
-  .refine((v) => v.title !== undefined || v.archived !== undefined, {
-    message: "At least one of 'title' or 'archived' is required",
-  });
+  .refine(
+    (v) =>
+      v.title !== undefined || v.archived !== undefined || v.model !== undefined,
+    {
+      message: "At least one of 'title', 'archived' or 'model' is required",
+    },
+  );
 
 chatRoutes.patch("/:id", csrfRequired, async (c) => {
   const user = c.get("user");
@@ -175,6 +182,9 @@ chatRoutes.patch("/:id", csrfRequired, async (c) => {
     scoped.chats.archive(idResult.data);
   } else if (parsed.data.archived === false) {
     scoped.chats.unarchive(idResult.data);
+  }
+  if (parsed.data.model !== undefined) {
+    scoped.chats.setModel(idResult.data, parsed.data.model);
   }
 
   const chat = scoped.chats.byId(idResult.data);

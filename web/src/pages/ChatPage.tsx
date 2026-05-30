@@ -211,6 +211,29 @@ export function ChatPage() {
     }
   }
 
+  async function onChangeModel(id: string) {
+    const existing = chatList.find((c) => c.id === id);
+    const current = existing?.model ?? "";
+    // Prompt UX is intentionally minimal — a free-form input mirrors how
+    // the gateway itself accepts arbitrary model strings (no fixed enum
+    // exposed). Empty input clears the override; cancel keeps current.
+    const next = window.prompt(
+      `Set model for "${existing?.title ?? id}".\nCurrent: ${current || "(default)"}\nLeave empty to clear.`,
+      current,
+    );
+    if (next === null) return; // user cancelled
+    const trimmed = next.trim();
+    setError(null);
+    try {
+      const { chat } = await chatsApi.patch(id, {
+        model: trimmed === "" ? null : trimmed,
+      });
+      setChatList((prev) => prev.map((c) => (c.id === id ? chat : c)));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Model change failed");
+    }
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedId || !input.trim()) return;
@@ -580,6 +603,12 @@ export function ChatPage() {
             setShortcutsOpen(true);
           } else if (slash === "/clear") {
             if (selectedId) void onDeleteChat(selectedId).then(() => onNewChat());
+          } else if (slash === "/model") {
+            if (!selectedId) {
+              alert("Open a chat first to change its model.");
+              return;
+            }
+            void onChangeModel(selectedId);
           } else {
             alert(`${slash} is not implemented yet`);
           }

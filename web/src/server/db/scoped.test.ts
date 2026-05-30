@@ -289,6 +289,42 @@ describe("ScopedDb chats isolation", () => {
     expect(list[0]?.id).toBe(b);
     expect(list[1]?.id).toBe(a);
   });
+
+  it("setModel updates the per-chat model and clears with null", () => {
+    const u1 = ulid();
+    createUser(u1, "alice");
+    const id = ulid();
+    forUser(db, u1).chats.insert({
+      id,
+      title: "M",
+      gatewaySessionId: "gw-m",
+      model: "claude-sonnet-4",
+    });
+    expect(forUser(db, u1).chats.byId(id)?.model).toBe("claude-sonnet-4");
+
+    forUser(db, u1).chats.setModel(id, "gpt-5");
+    expect(forUser(db, u1).chats.byId(id)?.model).toBe("gpt-5");
+
+    forUser(db, u1).chats.setModel(id, null);
+    expect(forUser(db, u1).chats.byId(id)?.model).toBeNull();
+  });
+
+  it("setModel does not leak across users", () => {
+    const u1 = ulid();
+    const u2 = ulid();
+    createUser(u1, "alice");
+    createUser(u2, "bob");
+    const id = ulid();
+    forUser(db, u2).chats.insert({
+      id,
+      title: "Bob chat",
+      gatewaySessionId: "gw-b",
+      model: "bob-model",
+    });
+    // Alice tries to overwrite Bob's model — must be a no-op.
+    forUser(db, u1).chats.setModel(id, "hijacked");
+    expect(forUser(db, u2).chats.byId(id)?.model).toBe("bob-model");
+  });
 });
 
 describe("ScopedDb messages isolation + delta accumulation", () => {

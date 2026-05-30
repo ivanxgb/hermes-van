@@ -236,7 +236,7 @@ export const chats = {
   create: (body: { title?: string; model?: string } = {}) =>
     api.post<{ chat: Chat }>("/api/chats", body),
   get: (id: string) => api.get<{ chat: Chat }>(`/api/chats/${id}`),
-  patch: (id: string, body: { title?: string; archived?: boolean }) =>
+  patch: (id: string, body: { title?: string; archived?: boolean; model?: string | null }) =>
     request<{ chat: Chat }>("PATCH", `/api/chats/${id}`, { body }),
   delete: (id: string) => api.delete<{ ok: true }>(`/api/chats/${id}`),
   messages: (id: string) =>
