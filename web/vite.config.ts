@@ -8,7 +8,9 @@ export default defineConfig({
     devServer({
       entry: "src/server/index.ts",
       exclude: [
-        /^\/(?!api\/).*/,
+        // Routes NOT in this list reach Hono.
+        // Pass-through to Vite: anything that's not /api/* and not /auth/*
+        /^\/(?!api\/|auth\/).*/,
         /\/@.+$/,
         /\.(ts|tsx|css|js|svg|png|jpg|jpeg|webp)(\?.*)?$/,
         /^\/node_modules\/.*/,

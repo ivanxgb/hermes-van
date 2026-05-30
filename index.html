@@ -668,7 +668,7 @@
     <div class="container">
       <div class="hero-pill">
         <span class="dot"></span>
-        <span>v0.0.0 · Phase 0 cierre · Phase 1 (Auth) próxima</span>
+        <span>v0.1.0 · Phase 1 cerrada · Phase 2 (chat /v1/runs) próxima</span>
       </div>
       <h1>
         Cliente web autenticado para Hermes Agent.<br>
@@ -971,13 +971,13 @@
       <div class="progress-card">
         <div class="progress-header">
           <span class="progress-label">— progreso global</span>
-          <span class="progress-pct">12%</span>
+          <span class="progress-pct">28%</span>
         </div>
-        <div class="progress-track"><div class="progress-fill"></div></div>
+        <div class="progress-track"><div class="progress-fill" style="width: 28%;"></div></div>
         <div class="progress-meta">
-          <span><strong>1</strong> de <strong>7</strong> fases activas</span>
+          <span><strong>2</strong> de <strong>7</strong> fases completadas</span>
           <span>actualizado: <strong>2026-05-30</strong></span>
-          <span>siguiente cierre: <strong>Phase 0 (0.8 pendiente)</strong></span>
+          <span>siguiente: <strong>Phase 2 — chat /v1/runs</strong></span>
         </div>
       </div>
 
@@ -986,7 +986,7 @@
         <div class="phase">
           <div class="phase-meta">
             <div class="phase-id">Phase 0</div>
-            <div class="phase-status active"><span class="dot"></span>cerrando</div>
+            <div class="phase-status done"><span class="dot"></span>completada</div>
           </div>
           <div class="phase-content">
             <h3>Foundation</h3>
@@ -994,11 +994,10 @@
             <ul class="phase-tasks">
               <li class="done">Repo creado en GitHub</li>
               <li class="done">Landing HTML + GitHub Pages</li>
-              <li class="done">docs/SECURITY.md v0.1</li>
-              <li class="done">docs/ARCHITECTURE.md v0.1</li>
-              <li class="done">docs/ROADMAP.md</li>
-              <li class="done">docs/phases/PHASE-1.md plan técnico</li>
-              <li class="done">Pivot Next.js → TanStack Start</li>
+              <li class="done">Modelo de amenazas y arquitectura definidos</li>
+              <li class="done">Roadmap publicado</li>
+              <li class="done">Plan técnico Phase 1</li>
+              <li class="done">Pivot Next.js → Vite + Hono (TypeScript)</li>
               <li class="done">Landing actualizada con stack final</li>
             </ul>
           </div>
@@ -1007,28 +1006,28 @@
         <div class="phase">
           <div class="phase-meta">
             <div class="phase-id">Phase 1</div>
-            <div class="phase-status next"><span class="dot"></span>siguiente</div>
+            <div class="phase-status done"><span class="dot"></span>completada</div>
           </div>
           <div class="phase-content">
             <h3>Security baseline + Auth + Skeleton</h3>
-            <p class="phase-tagline">Servidor mínimo con WebAuthn funcional. Hardening completo aplicado de salida. Sin chat aún.</p>
+            <p class="phase-tagline">Servidor mínimo con WebAuthn funcional. Hardening completo aplicado de salida. 54/54 tests verdes.</p>
             <ul class="phase-tasks">
-              <li>Scaffold TanStack Start + TS + Tailwind 4 + Drizzle</li>
-              <li>Schema DB con scoping (users, credentials, sessions, audit)</li>
-              <li>Wrapper db.scopedQuery con tests</li>
-              <li>Endpoints /auth/* (setup, login, recovery, logout, me)</li>
-              <li>Cliente WebAuthn + páginas /setup y /login</li>
-              <li>Middleware sesión + CSRF + rate limit</li>
-              <li>Recovery codes con Argon2id</li>
-              <li>Audit log emisión en eventos clave</li>
-              <li>Health check /health (DB + gateway)</li>
-              <li>Logger con redacción + Pino</li>
-              <li>nginx config + headers + TLS staging</li>
-              <li>Bootstrap script CLI</li>
-              <li>Tests unitarios cobertura >80% en auth</li>
-              <li>Tests e2e: bootstrap → setup → login → logout</li>
-              <li>docs/RUNBOOK.md (operación, rotación, restore)</li>
-              <li>Pentesting interno informal</li>
+              <li class="done">Scaffold Vite + React 19 + Hono + TS estricto</li>
+              <li class="done">Schema DB SQLCipher (users, credentials, sessions, audit, recovery, setup_tokens)</li>
+              <li class="done">Wrapper ScopedDb con tests de aislamiento cross-user</li>
+              <li class="done">Endpoints /auth/* (setup, login, recovery, logout, logout-all, me)</li>
+              <li class="done">Cliente WebAuthn + páginas /setup y /login con passkey + recovery tabs</li>
+              <li class="done">Middleware sesión + CSRF double-submit + rate limit + headers</li>
+              <li class="done">Recovery codes con Argon2id (10 codes Crockford-base32)</li>
+              <li class="done">Audit log emisión en 14 eventos auth</li>
+              <li class="done">Health check /api/health con probe del gateway</li>
+              <li class="done">Logger Pino con redacción de secretos</li>
+              <li class="done">deploy/nginx-hermes-van.conf con TLS 1.3 + HSTS + CSP</li>
+              <li class="done">Bootstrap script CLI con token one-time SHA-256</li>
+              <li class="done">Tests unitarios 54/54 (env, logger, scoped, recovery, session, ratelimit)</li>
+              <li class="done">Playwright e2e smoke (5 tests)</li>
+              <li class="done">docs/RUNBOOK.md (deploy, rotación, restore, incident response)</li>
+              <li class="done">docs/PENTEST.md (12 categorías de verificación manual)</li>
             </ul>
           </div>
         </div>
@@ -1036,22 +1035,24 @@
         <div class="phase">
           <div class="phase-meta">
             <div class="phase-id">Phase 2</div>
-            <div class="phase-status queued"><span class="dot"></span>pendiente</div>
+            <div class="phase-status next"><span class="dot"></span>siguiente</div>
           </div>
           <div class="phase-content">
             <h3>MVP — single chat funcional</h3>
-            <p class="phase-tagline">Una conversación con streaming. Suficiente para uso diario.</p>
+            <p class="phase-tagline">Una conversación con streaming via /v1/runs. Reconexión tolerante. Suficiente para uso diario.</p>
             <ul class="phase-tasks">
               <li>Cliente HTTP tipado del gateway (lib/gateway)</li>
-              <li>Server function: list/create/delete sessions</li>
+              <li>Server functions: list/create/delete sessions</li>
               <li>Server function: get session messages</li>
-              <li>Server function: stream chat (proxy SSE)</li>
-              <li>UI: sidebar de sesiones</li>
-              <li>UI: panel de chat con markdown + shiki</li>
-              <li>Streaming token-a-token con cancelación</li>
-              <li>Render MEDIA: paths inline</li>
-              <li>Loading + error states</li>
-              <li>Tests e2e flujo completo de chat</li>
+              <li>Tabla active_runs con indirección ULID local → upstream_run_id</li>
+              <li>Server function: POST /api/chat/run (proxy a /v1/runs)</li>
+              <li>Server function: GET /api/chat/run/{id}/events (proxy SSE)</li>
+              <li>Reconexión automática al cargar /chat/{sessionId}</li>
+              <li>UI: sidebar de sesiones + panel de chat</li>
+              <li>Render markdown + shiki + MEDIA: paths</li>
+              <li>Streaming token-a-token con cancelación (Esc)</li>
+              <li>Cleanup periódico de runs stale</li>
+              <li>Tests e2e: chat completo + desconexión/reconexión</li>
             </ul>
           </div>
         </div>
