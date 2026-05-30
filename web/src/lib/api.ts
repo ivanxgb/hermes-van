@@ -325,3 +325,51 @@ export const push = {
     api.post<{ ok: true }>("/api/push/unsubscribe", { endpoint }),
   test: () => api.post<PushTestResponse>("/api/push/test"),
 };
+
+// ─── Uploads (Phase 6.D) ───────────────────────────────────────────
+export interface AttachmentRecord {
+  id: string;
+  filename: string;
+  mimeType: string;
+  sizeBytes: number;
+  sha256: string;
+  chatId: string | null;
+  createdAt: number;
+}
+
+export interface UploadResponse extends AttachmentRecord {
+  mediaUrl: string;
+  deduplicated: boolean;
+}
+
+export const uploads = {
+  list: (chatId?: string) =>
+    api.get<{ items: AttachmentRecord[] }>(
+      `/api/uploads${chatId ? `?chatId=${encodeURIComponent(chatId)}` : ""}`,
+    ),
+  /**
+   * Multipart upload. We bypass the JSON helper because /api/uploads
+   * expects FormData, and we still need the X-CSRF-Token cookie reflection.
+   */
+  async upload(file: File, chatId?: string): Promise<UploadResponse> {
+    const fd = new FormData();
+    fd.append("file", file, file.name);
+    if (chatId) fd.append("chatId", chatId);
+    const csrf =
+      (document.cookie.match(/(?:^|;\s*)hv_csrf=([^;]+)/) ?? [])[1] ?? "";
+    const res = await fetch("/api/uploads", {
+      method: "POST",
+      headers: { "X-CSRF-Token": csrf },
+      body: fd,
+      credentials: "same-origin",
+    });
+    if (!res.ok) {
+      const body = (await res.json().catch(() => ({}))) as { error?: string };
+      throw new Error(body.error ?? `upload failed (${res.status})`);
+    }
+    return (await res.json()) as UploadResponse;
+  },
+  remove: (id: string) =>
+    api.delete<{ ok: true; gcRemovedBlob: boolean }>(`/api/uploads/${id}`),
+  rawUrl: (id: string) => `/api/uploads/${id}/raw`,
+};

@@ -737,6 +737,37 @@ code {
   50% { opacity: 0.55; }
 }
 
+/* ── ATTACH BUTTON (Phase 6.D) ────────── */
+.btn-attach {
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  color: var(--text-muted);
+  font-size: 14px;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition:
+    border-color 150ms ease,
+    color 150ms ease,
+    background 150ms ease;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.btn-attach:hover:not(:disabled) {
+  border-color: var(--text-muted);
+  color: var(--text);
+}
+
+.btn-attach:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-attach.busy {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .composer .btn-primary {
   margin-top: 0;
   height: fit-content;

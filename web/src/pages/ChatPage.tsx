@@ -29,6 +29,7 @@ import {
 import { renderMarkdown, hardenLinks } from "../lib/markdown";
 import { CommandPalette } from "../components/CommandPalette";
 import { VoiceInput } from "../components/VoiceInput";
+import { FileAttachButton } from "../components/FileAttachButton";
 
 function MessageBody({ content, streaming }: { content: string; streaming: boolean }) {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -506,6 +507,17 @@ export function ChatPage() {
                 data-testid="composer-input"
               />
               <div className="composer-actions">
+                <FileAttachButton
+                  disabled={streaming}
+                  chatId={selectedId ?? undefined}
+                  onAttached={(snippet) => {
+                    setInput((prev) => {
+                      if (prev.length === 0) return snippet;
+                      const sep = prev.endsWith("\n") ? "" : "\n";
+                      return `${prev}${sep}${snippet}`;
+                    });
+                  }}
+                />
                 <VoiceInput
                   disabled={streaming}
                   onTranscript={(chunk, isFinal) => {
