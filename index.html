@@ -668,7 +668,7 @@
     <div class="container">
       <div class="hero-pill">
         <span class="dot"></span>
-        <span>v0.1.0 · Phase 4 cerrada · Phase 5 (polish + producción) próxima</span>
+        <span>v0.1.0 · Phase 5 en marcha (5.A + 5.B ✅) · backups & deploy próximos</span>
       </div>
       <h1>
         Cliente web autenticado para Hermes Agent.<br>
@@ -971,13 +971,13 @@
       <div class="progress-card">
         <div class="progress-header">
           <span class="progress-label">— progreso global</span>
-          <span class="progress-pct">71%</span>
+          <span class="progress-pct">78%</span>
         </div>
-        <div class="progress-track"><div class="progress-fill" style="width: 71%;"></div></div>
+        <div class="progress-track"><div class="progress-fill" style="width: 78%;"></div></div>
         <div class="progress-meta">
-          <span><strong>5</strong> de <strong>7</strong> fases completadas</span>
+          <span><strong>4</strong> fases ✅ · <strong>Phase 5</strong> en marcha (2/4 sub-phases)</span>
           <span>actualizado: <strong>2026-05-30</strong></span>
-          <span>siguiente: <strong>Phase 5 — polish + producción</strong></span>
+          <span>siguiente: <strong>5.C — backups + deploy en hermes.vintek.io</strong></span>
         </div>
       </div>
 
@@ -1103,23 +1103,24 @@
         <div class="phase">
           <div class="phase-meta">
             <div class="phase-id">Phase 5</div>
-            <div class="phase-status next"><span class="dot"></span>siguiente</div>
+            <div class="phase-status active"><span class="dot"></span>en marcha</div>
           </div>
           <div class="phase-content">
             <h3>Polish + producción</h3>
-            <p class="phase-tagline">Listo para uso diario en hermes.vintek.io con TLS, push y monitoring.</p>
+            <p class="phase-tagline">Mobile UX, security panel, backups, deploy en hermes.vintek.io con TLS y monitoring. 31/31 e2e green tras 5.A + 5.B.</p>
             <ul class="phase-tasks">
-              <li>Mobile responsive completo</li>
-              <li>Termius-friendly (touch targets)</li>
-              <li>Atajos overlay con ⌘/</li>
+              <li class="done">5.A — Mobile drawer + shortcuts overlay (?, ⌘/, Esc layered)</li>
+              <li class="done">5.A — iOS no-zoom composer + 40px touch targets + ellipsis title</li>
+              <li class="done">5.B — /auth/sessions list con isCurrent flag</li>
+              <li class="done">5.B — /auth/sessions/:id/revoke per-session (cookies clear si es current)</li>
+              <li class="done">5.B — /auth/audit?limit=N con metadata JSON-parsed</li>
+              <li class="done">5.B — Settings page rewrite: sessions panel + audit log</li>
+              <li>5.C — Backups encriptados de DB con round-trip test</li>
+              <li>5.D — nginx + Certbot + systemd-run en hermes.vintek.io</li>
               <li>Web push notifications (VAPID)</li>
-              <li>Sound notifications opcional</li>
-              <li>nginx + Certbot en hermes.vintek.io</li>
-              <li>systemd-run --user --scope unit</li>
               <li>HSTS preload submission</li>
               <li>Pentesting interno informal</li>
-              <li>Backups automatizados de DB</li>
-              <li>Alertas a Telegram</li>
+              <li>Alertas a Telegram on incidents</li>
             </ul>
           </div>
         </div>
