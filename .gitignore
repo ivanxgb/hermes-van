@@ -13,6 +13,8 @@ dist/
 
 # data
 data/
+backups/
+web/backups/
 *.db
 *.db-wal
 *.db-shm
