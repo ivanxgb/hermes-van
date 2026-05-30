@@ -55,8 +55,15 @@ pre,
   font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, "Courier New", monospace;
 }
 
+html,
+body {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
 #app {
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 /* ── LAYOUT ─────────────────────────── */
@@ -421,6 +428,7 @@ code {
   display: grid;
   grid-template-columns: 280px 1fr;
   height: 100vh;
+  height: 100dvh;
   background: var(--bg);
 }
 
@@ -558,6 +566,7 @@ code {
   flex-direction: column;
   min-width: 0;
   height: 100vh;
+  height: 100dvh;
 }
 
 .chat-head {
@@ -1014,6 +1023,7 @@ code {
     top: 0;
     left: 0;
     height: 100vh;
+    height: 100dvh;
     width: min(85vw, 320px);
     max-height: none;
     border-right: 1px solid var(--border);
@@ -1032,6 +1042,7 @@ code {
   }
   .chat-main {
     height: 100vh;
+    height: 100dvh;
     min-height: 0;
   }
   .hamburger {

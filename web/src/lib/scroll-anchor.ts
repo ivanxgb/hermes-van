@@ -70,10 +70,24 @@ export function useScrollAnchor(): ScrollAnchor {
 
   const scrollToBottom = useCallback(
     (opts: { behavior?: ScrollBehavior } = {}) => {
-      ref.current?.scrollIntoView({
-        behavior: opts.behavior ?? "smooth",
-        block: "end",
-      });
+      const sentinel = ref.current;
+      if (!sentinel) return;
+      // Walk up to find the nearest scrollable ancestor and scroll it
+      // directly. scrollIntoView() walks up too, but on iOS it ALSO
+      // scrolls the layout viewport, which pushes the composer
+      // off-screen when the keyboard is open.
+      let parent: HTMLElement | null = sentinel.parentElement;
+      while (parent) {
+        const oy = getComputedStyle(parent).overflowY;
+        if (oy === "auto" || oy === "scroll") {
+          parent.scrollTo({
+            top: parent.scrollHeight,
+            behavior: opts.behavior ?? "smooth",
+          });
+          return;
+        }
+        parent = parent.parentElement;
+      }
     },
     [],
   );

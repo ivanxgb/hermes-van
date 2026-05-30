@@ -112,12 +112,18 @@ export function ChatPage() {
 
   // Auto-scroll, but only when the user is already at the bottom.
   // This prevents streaming deltas from yanking the viewport away when
-  // they've scrolled up to re-read earlier turns.
+  // they've scrolled up to re-read earlier turns. Deps use primitives
+  // (length, status string) so this doesn't re-fire on every keystroke
+  // because of object-reference churn.
+  const messageCount = focused.messages.length;
+  const lastMessageContent = focused.messages[focused.messages.length - 1]?.content ?? "";
+  const runStatus = focusedRun?.status;
   useEffect(() => {
     if (scroll.atBottom) {
       scroll.scrollToBottom({ behavior: "smooth" });
     }
-  }, [focused.messages, focusedRun?.status, scroll]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messageCount, lastMessageContent, runStatus]);
 
   // Global keyboard shortcuts
   useEffect(() => {

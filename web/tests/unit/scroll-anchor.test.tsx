@@ -73,7 +73,11 @@ interface HarnessHandle {
 const Harness = forwardRef<HarnessHandle>(function Harness(_props, ref) {
   const anchor = useScrollAnchor();
   useImperativeHandle(ref, () => ({ current: anchor }), [anchor]);
-  return <div ref={anchor.ref} data-testid="sentinel" />;
+  return (
+    <div data-testid="scroller" style={{ overflowY: "auto" }}>
+      <div ref={anchor.ref} data-testid="sentinel" />
+    </div>
+  );
 });
 
 function mount() {
@@ -95,8 +99,13 @@ beforeEach(() => {
     configurable: true,
     value: 800,
   });
-  // jsdom doesn't ship scrollIntoView; install a no-op so spies attach.
+  // jsdom doesn't ship scrollIntoView/scrollTo; install no-ops so spies attach.
   Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+    configurable: true,
+    writable: true,
+    value: () => undefined,
+  });
+  Object.defineProperty(HTMLElement.prototype, "scrollTo", {
     configurable: true,
     writable: true,
     value: () => undefined,
@@ -140,14 +149,18 @@ describe("useScrollAnchor", () => {
     expect(handle.current.scrolledFar).toBe(true);
   });
 
-  test("scrollToBottom calls scrollIntoView on the sentinel", () => {
+  test("scrollToBottom scrolls the nearest scrollable ancestor", () => {
     const { handle, getByTestId } = mount();
-    const node = getByTestId("sentinel");
+    const scroller = getByTestId("scroller");
+    Object.defineProperty(scroller, "scrollHeight", {
+      configurable: true,
+      value: 4242,
+    });
     const spy = vi
-      .spyOn(node, "scrollIntoView")
+      .spyOn(scroller, "scrollTo")
       .mockImplementation(() => undefined);
     handle.current.scrollToBottom({ behavior: "auto" });
-    expect(spy).toHaveBeenCalledWith({ behavior: "auto", block: "end" });
+    expect(spy).toHaveBeenCalledWith({ top: 4242, behavior: "auto" });
   });
 
   test("missing IntersectionObserver → atBottom stays true", () => {
