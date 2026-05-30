@@ -987,11 +987,34 @@ code {
   z-index: 80;
 }
 
+.model-head {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid var(--border);
+}
+
+.model-back {
+  flex-shrink: 0;
+  padding: 0 14px;
+  background: transparent;
+  border: 0;
+  border-right: 1px solid var(--border);
+  color: var(--text-dim);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.model-back:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+
 .model-search {
+  flex: 1;
   padding: 10px 12px;
   background: var(--surface);
   border: 0;
-  border-bottom: 1px solid var(--border);
   color: var(--text);
   font-family: "JetBrains Mono", monospace;
   font-size: 12px;
@@ -1000,7 +1023,6 @@ code {
 
 .model-search:focus {
   background: var(--bg);
-  border-bottom-color: var(--accent-dim);
 }
 
 .model-list {
@@ -1008,12 +1030,44 @@ code {
   overflow-y: auto;
 }
 
-.model-group-head {
-  padding: 8px 12px 4px;
+.model-provider-item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.model-provider-item:hover,
+.model-provider-item.active {
+  background: var(--surface);
+}
+
+.model-provider-name {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.model-provider-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   font-family: "JetBrains Mono", monospace;
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
+  font-size: 11px;
+  color: var(--text-dim);
+  text-transform: lowercase;
+}
+
+.model-provider-caret {
+  font-size: 16px;
   color: var(--text-dim);
 }
 
@@ -1042,8 +1096,23 @@ code {
   color: var(--accent);
 }
 
+.model-item-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
 .model-item-label {
   font-weight: 500;
+}
+
+.model-item-provider {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .model-item-tags {

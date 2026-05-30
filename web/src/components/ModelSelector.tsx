@@ -1,14 +1,17 @@
 /**
- * ModelSelector — popup dropdown for picking which model the active
+ * ModelSelector — drill-down popup for picking which model the active
  * chat should run against.
  *
- * Triggered by clicking the model pill in the chat header. The pill
- * shows current model (or "default"). Dropdown groups models by
- * provider, lets the user search by typing, and offers a "Custom..."
- * row that opens a window.prompt for free-form ids.
+ * UX:
+ *   - First view: list of providers (Kiro, Anthropic, Vertex AI, …)
+ *     with a small caption showing how many models each one carries.
+ *   - Tap a provider → drill into its model list. Back arrow returns.
+ *   - Type in the search box at any level → flat result list filtered
+ *     across every provider (escapes the drill).
+ *   - Footer offers Custom… (free-form id) and "Use gateway default"
+ *     when a model is currently set.
  *
- * State is local (open/closed, query, active index). The caller owns
- * the actual model assignment via onPick.
+ * State stays local; the caller owns the actual patch via onPick.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MODELS, type ModelOption, modelDisplay } from "../lib/models";
@@ -22,20 +25,34 @@ interface Props {
   disabled?: boolean;
 }
 
+type View =
+  | { kind: "providers" }
+  | { kind: "models"; provider: string }
+  | { kind: "search"; query: string };
+
 export function ModelSelector({ value, onPick, disabled }: Props) {
   const [open, setOpen] = useState(false);
+  const [view, setView] = useState<View>({ kind: "providers" });
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  // Reset query each open + focus the search box.
+  // Reset on each open. If the chat has a model from a known provider,
+  // open straight to that provider's list so the current pick is right
+  // there — saves a tap.
   useEffect(() => {
     if (!open) return;
     setQuery("");
     setActive(0);
+    const current = MODELS.find((m) => m.id === value);
+    setView(
+      current
+        ? { kind: "models", provider: current.provider }
+        : { kind: "providers" },
+    );
     requestAnimationFrame(() => inputRef.current?.focus());
-  }, [open]);
+  }, [open, value]);
 
   // Click outside / Escape closes.
   useEffect(() => {
@@ -46,7 +63,13 @@ export function ModelSelector({ value, onPick, disabled }: Props) {
       }
     }
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") {
+        if (view.kind === "models" && !query) {
+          setView({ kind: "providers" });
+        } else {
+          setOpen(false);
+        }
+      }
     }
     document.addEventListener("mousedown", onDocClick);
     document.addEventListener("keydown", onKey);
@@ -54,11 +77,22 @@ export function ModelSelector({ value, onPick, disabled }: Props) {
       document.removeEventListener("mousedown", onDocClick);
       document.removeEventListener("keydown", onKey);
     };
-  }, [open]);
+  }, [open, view, query]);
 
-  const matches = useMemo<ModelOption[]>(() => {
+  // Provider summary for the first view.
+  const providers = useMemo(() => {
+    const out = new Map<string, ModelOption[]>();
+    for (const m of MODELS) {
+      if (!out.has(m.provider)) out.set(m.provider, []);
+      out.get(m.provider)!.push(m);
+    }
+    return Array.from(out.entries());
+  }, []);
+
+  // Flat search results when the user types.
+  const searchMatches = useMemo<ModelOption[]>(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return MODELS;
+    if (!q) return [];
     return MODELS.filter(
       (m) =>
         m.id.toLowerCase().includes(q) ||
@@ -67,15 +101,11 @@ export function ModelSelector({ value, onPick, disabled }: Props) {
     );
   }, [query]);
 
-  // Group while preserving filter ordering.
-  const groups = useMemo(() => {
-    const out = new Map<string, ModelOption[]>();
-    for (const m of matches) {
-      if (!out.has(m.provider)) out.set(m.provider, []);
-      out.get(m.provider)!.push(m);
-    }
-    return out;
-  }, [matches]);
+  const inSearch = query.trim().length > 0;
+  const inModels = view.kind === "models" && !inSearch;
+  const modelList = inModels
+    ? MODELS.filter((m) => m.provider === view.provider)
+    : [];
 
   function commit(m: ModelOption) {
     setOpen(false);
@@ -98,10 +128,19 @@ export function ModelSelector({ value, onPick, disabled }: Props) {
     onPick(null);
   }
 
+  // Pick the active list for keyboard navigation. Providers, models,
+  // or search results — whichever is on screen.
+  const navList: { type: "provider" | "model"; key: string; data: unknown }[] =
+    inSearch
+      ? searchMatches.map((m) => ({ type: "model", key: m.id, data: m }))
+      : inModels
+        ? modelList.map((m) => ({ type: "model", key: m.id, data: m }))
+        : providers.map(([p, ms]) => ({ type: "provider", key: p, data: ms }));
+
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setActive((i) => Math.min(matches.length - 1, i + 1));
+      setActive((i) => Math.min(navList.length - 1, i + 1));
       return;
     }
     if (e.key === "ArrowUp") {
@@ -111,12 +150,22 @@ export function ModelSelector({ value, onPick, disabled }: Props) {
     }
     if (e.key === "Enter") {
       e.preventDefault();
-      const cmd = matches[active];
-      if (cmd) commit(cmd);
+      const item = navList[active];
+      if (!item) return;
+      if (item.type === "provider") {
+        setView({ kind: "models", provider: item.key });
+        setActive(0);
+      } else {
+        commit(item.data as ModelOption);
+      }
+      return;
+    }
+    if (e.key === "ArrowLeft" && inModels && !query) {
+      e.preventDefault();
+      setView({ kind: "providers" });
+      setActive(0);
     }
   }
-
-  let runningIndex = -1;
 
   return (
     <div className="model-selector" ref={wrapRef}>
@@ -141,57 +190,126 @@ export function ModelSelector({ value, onPick, disabled }: Props) {
           role="listbox"
           data-testid="model-popover"
         >
-          <input
-            ref={inputRef}
-            className="model-search"
-            placeholder="Search models…"
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setActive(0);
-            }}
-            onKeyDown={onKeyDown}
-            data-testid="model-search"
-            spellCheck={false}
-            autoComplete="off"
-          />
-          <div className="model-list">
-            {Array.from(groups.entries()).map(([provider, items]) => (
-              <div key={provider} className="model-group">
-                <div className="model-group-head">{provider}</div>
-                {items.map((m) => {
-                  runningIndex += 1;
-                  const idx = runningIndex;
-                  return (
-                    <button
-                      key={m.id}
-                      type="button"
-                      role="option"
-                      aria-selected={idx === active || m.id === value}
-                      className={`model-item ${
-                        idx === active ? "active" : ""
-                      } ${m.id === value ? "current" : ""}`}
-                      onClick={() => commit(m)}
-                      onMouseEnter={() => setActive(idx)}
-                      data-testid={`model-item-${m.id}`}
-                    >
-                      <span className="model-item-label">{m.label}</span>
-                      <span className="model-item-tags">
-                        {(m.tags ?? []).map((t) => (
-                          <span key={t} className="model-tag">
-                            {t}
-                          </span>
-                        ))}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            ))}
-            {matches.length === 0 ? (
-              <div className="model-empty">no matches</div>
+          <div className="model-head">
+            {inModels ? (
+              <button
+                type="button"
+                className="model-back"
+                onClick={() => {
+                  setView({ kind: "providers" });
+                  setActive(0);
+                }}
+                aria-label="Back to providers"
+                data-testid="model-back"
+              >
+                ←
+              </button>
             ) : null}
+            <input
+              ref={inputRef}
+              className="model-search"
+              placeholder={
+                inModels
+                  ? `Search ${view.provider}…`
+                  : "Search providers and models…"
+              }
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setActive(0);
+              }}
+              onKeyDown={onKeyDown}
+              data-testid="model-search"
+              spellCheck={false}
+              autoComplete="off"
+            />
           </div>
+
+          <div className="model-list">
+            {inSearch ? (
+              searchMatches.length === 0 ? (
+                <div className="model-empty">no matches</div>
+              ) : (
+                searchMatches.map((m, i) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    role="option"
+                    aria-selected={i === active}
+                    className={`model-item ${i === active ? "active" : ""} ${
+                      m.id === value ? "current" : ""
+                    }`}
+                    onClick={() => commit(m)}
+                    onMouseEnter={() => setActive(i)}
+                    data-testid={`model-item-${m.id}`}
+                  >
+                    <div className="model-item-main">
+                      <span className="model-item-label">{m.label}</span>
+                      <span className="model-item-provider">
+                        {m.provider}
+                      </span>
+                    </div>
+                    <span className="model-item-tags">
+                      {(m.tags ?? []).map((t) => (
+                        <span key={t} className="model-tag">
+                          {t}
+                        </span>
+                      ))}
+                    </span>
+                  </button>
+                ))
+              )
+            ) : inModels ? (
+              modelList.map((m, i) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  role="option"
+                  aria-selected={i === active}
+                  className={`model-item ${i === active ? "active" : ""} ${
+                    m.id === value ? "current" : ""
+                  }`}
+                  onClick={() => commit(m)}
+                  onMouseEnter={() => setActive(i)}
+                  data-testid={`model-item-${m.id}`}
+                >
+                  <span className="model-item-label">{m.label}</span>
+                  <span className="model-item-tags">
+                    {(m.tags ?? []).map((t) => (
+                      <span key={t} className="model-tag">
+                        {t}
+                      </span>
+                    ))}
+                  </span>
+                </button>
+              ))
+            ) : (
+              providers.map(([p, ms], i) => (
+                <button
+                  key={p}
+                  type="button"
+                  role="option"
+                  aria-selected={i === active}
+                  className={`model-provider-item ${
+                    i === active ? "active" : ""
+                  }`}
+                  onClick={() => {
+                    setView({ kind: "models", provider: p });
+                    setActive(0);
+                  }}
+                  onMouseEnter={() => setActive(i)}
+                  data-testid={`model-provider-${p}`}
+                >
+                  <span className="model-provider-name">{p}</span>
+                  <span className="model-provider-meta">
+                    {ms.length} model{ms.length === 1 ? "" : "s"}
+                    <span className="model-provider-caret">›</span>
+                  </span>
+                </button>
+              ))
+            )}
+          </div>
+
           <div className="model-foot">
             <button
               type="button"
