@@ -41,11 +41,23 @@ interface ChatState {
   run: RunState | null;
   /** Last refresh time so we can throttle reloads. */
   lastFetchAt: number;
+  /**
+   * Count of completed/failed runs since the user last focused this
+   * chat. Bumped on terminal SSE events; cleared by markChatRead().
+   * Used by the sidebar to render "n" badges so users know which
+   * background chats finished while they were elsewhere.
+   */
+  unread: number;
 }
 
 type Listener = () => void;
 
-const EMPTY_CHAT_STATE: ChatState = { messages: [], run: null, lastFetchAt: 0 };
+const EMPTY_CHAT_STATE: ChatState = {
+  messages: [],
+  run: null,
+  lastFetchAt: 0,
+  unread: 0,
+};
 
 const chatStates = new Map<string, ChatState>();
 const eventSources = new Map<string, EventSource>();
@@ -61,7 +73,7 @@ function emit(chatId: string) {
 function getOrInit(chatId: string): ChatState {
   let s = chatStates.get(chatId);
   if (!s) {
-    s = { messages: [], run: null, lastFetchAt: 0 };
+    s = { messages: [], run: null, lastFetchAt: 0, unread: 0 };
     chatStates.set(chatId, s);
   }
   return s;
@@ -119,6 +131,15 @@ export function useAnyChatChange(): number {
   );
 }
 
+/** Returns Map of chatId → unread count for chats with badges to show. */
+export function getUnreadCounts(): ReadonlyMap<string, number> {
+  const out = new Map<string, number>();
+  for (const [chatId, state] of chatStates) {
+    if (state.unread > 0) out.set(chatId, state.unread);
+  }
+  return out;
+}
+
 /** Returns Map of chatId → run for chats currently streaming. Read-only. */
 export function getActiveRuns(): ReadonlyMap<string, RunState> {
   const out = new Map<string, RunState>();
@@ -126,6 +147,39 @@ export function getActiveRuns(): ReadonlyMap<string, RunState> {
     if (state.run && state.run.status === "streaming") out.set(chatId, state.run);
   }
   return out;
+}
+
+/**
+ * The chat currently focused in the UI. Used by the SSE finalize path to
+ * decide whether to bump the unread badge — focused chats don't need
+ * notification because the user is already looking at them.
+ */
+let focusedChatId: string | null = null;
+
+/** Set or clear the currently focused chat. Side effect: clears its unread. */
+export function setFocusedChat(chatId: string | null): void {
+  focusedChatId = chatId;
+  if (chatId) {
+    const state = chatStates.get(chatId);
+    if (state && state.unread > 0) {
+      patch(chatId, (s) => ({ ...s, unread: 0 }));
+    }
+  }
+}
+
+/** Explicitly mark a chat read (clears unread). */
+export function markChatRead(chatId: string): void {
+  const state = chatStates.get(chatId);
+  if (state && state.unread > 0) {
+    patch(chatId, (s) => ({ ...s, unread: 0 }));
+  }
+}
+
+/** Total unread count across all chats. Used for the document title badge. */
+export function getTotalUnread(): number {
+  let total = 0;
+  for (const state of chatStates.values()) total += state.unread;
+  return total;
 }
 
 // ─── Loading / fetching ────────────────────────────────────────────────
@@ -294,6 +348,12 @@ function openStream(input: { runId: string; chatId: string; messageId: string })
       messages: s.messages.map((m) =>
         m.id === messageId ? { ...m, status, error: error ?? null } : m,
       ),
+      // Bump unread badge if this chat isn't the one currently focused
+      // and the run wasn't cancelled by the user explicitly.
+      unread:
+        chatId !== focusedChatId && status !== "cancelled"
+          ? s.unread + 1
+          : s.unread,
     }));
     // Re-pull authoritative state to capture any usage/metadata persisted server-side
     void loadChat(chatId, { force: true });

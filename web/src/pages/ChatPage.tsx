@@ -17,7 +17,10 @@ import { logout, useAuth } from "../lib/auth-store";
 import {
   closeAllStreams,
   getActiveRuns,
+  getTotalUnread,
+  getUnreadCounts,
   loadChat,
+  setFocusedChat,
   startChatRun,
   useAnyChatChange,
   useChat,
@@ -79,9 +82,23 @@ export function ChatPage() {
 
   // Hydrate messages whenever a different chat is selected.
   useEffect(() => {
+    setFocusedChat(selectedId);
     if (!selectedId) return;
     void loadChat(selectedId);
   }, [selectedId]);
+
+  // Drop focus on unmount so background unread bumping resumes once
+  // we navigate away from /chat.
+  useEffect(() => {
+    return () => setFocusedChat(null);
+  }, []);
+
+  // Reflect total unread in the document title so users notice when a
+  // background chat finishes even with the tab unfocused.
+  useEffect(() => {
+    const total = getTotalUnread();
+    document.title = total > 0 ? `(${total}) hermes-van` : "hermes-van";
+  });
 
   // Auto-scroll
   useEffect(() => {
@@ -186,6 +203,7 @@ export function ChatPage() {
   // Read fresh per-render so badges flip from streaming → idle as soon
   // as the store finalizes a run.
   const liveRuns = getActiveRuns();
+  const unreadCounts = getUnreadCounts();
 
   return (
     <div className="chat-shell">
@@ -207,6 +225,7 @@ export function ChatPage() {
           ) : (
             chatList.map((c) => {
               const live = liveRuns.has(c.id);
+              const unread = unreadCounts.get(c.id) ?? 0;
               return (
                 <div
                   key={c.id}
@@ -214,6 +233,7 @@ export function ChatPage() {
                   onClick={() => setSelectedId(c.id)}
                   data-testid={`chat-row-${c.id}`}
                   data-live={live ? "true" : "false"}
+                  data-unread={unread}
                 >
                   <span className="chat-title">{c.title}</span>
                   {live ? (
@@ -222,6 +242,14 @@ export function ChatPage() {
                       data-testid={`chat-live-${c.id}`}
                       title="Streaming"
                     />
+                  ) : unread > 0 ? (
+                    <span
+                      className="unread-badge"
+                      data-testid={`chat-unread-${c.id}`}
+                      title={`${unread} new`}
+                    >
+                      {unread}
+                    </span>
                   ) : null}
                   <button
                     className="btn-ghost btn-xs"
