@@ -12,11 +12,36 @@
  */
 import "dotenv/config";
 import { serve } from "@hono/node-server";
+import { serveStatic } from "@hono/node-server/serve-static";
+import { existsSync } from "node:fs";
 import app from "./index";
 import { loadEnv } from "./lib/env";
 import { logger } from "./lib/logger";
 
 const env = loadEnv();
+
+// In dev, Vite serves /public/* and the SPA. In production, we have to
+// do that ourselves. Mount /public assets first (notably /sw.js, which
+// MUST be served from the root scope for the push service worker to
+// claim the whole origin), then the Hono routes (registered via
+// app.route() in src/server/index.ts), then a SPA fallback that serves
+// dist/index.html for any unmatched non-API route.
+app.use("/sw.js", serveStatic({ path: "./public/sw.js" }));
+app.use("/favicon.ico", serveStatic({ path: "./public/favicon.ico" }));
+
+// Vite build output (run `pnpm build` first). If dist/ doesn't exist,
+// the prod server still works for the API but the SPA shell will 404 —
+// that's acceptable for API-only deployments.
+if (existsSync("./dist")) {
+  app.use("/assets/*", serveStatic({ root: "./dist" }));
+  // SPA fallback: anything that's not /api/* or /auth/* falls back to
+  // index.html so client-side routing works on hard reload.
+  app.use("*", async (c, next) => {
+    const path = new URL(c.req.url).pathname;
+    if (path.startsWith("/api/") || path.startsWith("/auth/")) return next();
+    return serveStatic({ path: "./dist/index.html" })(c, next);
+  });
+}
 
 const server = serve(
   {
