@@ -15,11 +15,32 @@
 import DOMPurify from "dompurify";
 import type { Config as DOMPurifyConfig } from "dompurify";
 import { Marked } from "marked";
+import { isDiffLang, renderDiff } from "./diff";
 
 const marked = new Marked({
   gfm: true,
   breaks: true,
   async: false,
+});
+
+// Phase 6.E — intercept fenced code blocks tagged `diff` / `patch` /
+// `udiff` and replace marked's default <pre><code class="language-diff">
+// output with our line-classified diff renderer. Falls back to the
+// default behaviour for every other language.
+marked.use({
+  renderer: {
+    code(token) {
+      const text = token.text ?? "";
+      const lang = token.lang ?? "";
+      if (isDiffLang(lang)) {
+        return renderDiff(text);
+      }
+      // Defer to the default renderer by returning false (marked's
+      // contract: a falsy return from a custom renderer makes it fall
+      // back to the built-in implementation).
+      return false as unknown as string;
+    },
+  },
 });
 
 const SAFE_CONFIG: DOMPurifyConfig = {

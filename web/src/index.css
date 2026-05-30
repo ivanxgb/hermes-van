@@ -768,6 +768,55 @@ code {
   color: var(--accent);
 }
 
+/* ── DIFF VIEW (Phase 6.E) ────────────── */
+.diff-block {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--border-strong);
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  font-size: 12.5px;
+  line-height: 1.55;
+  margin: 12px 0;
+  overflow-x: auto;
+  padding: 4px 0;
+}
+
+.diff-line {
+  padding: 0 12px;
+  white-space: pre;
+  border-left: 3px solid transparent;
+}
+
+.diff-line.add {
+  background: rgba(74, 222, 128, 0.07);
+  border-left-color: var(--success);
+  color: #c0f0c8;
+}
+
+.diff-line.remove {
+  background: rgba(239, 68, 68, 0.07);
+  border-left-color: var(--danger);
+  color: #f4c2c2;
+}
+
+.diff-line.hunk {
+  color: var(--accent);
+  background: var(--surface-2);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding-top: 2px;
+  padding-bottom: 2px;
+  margin: 2px 0;
+}
+
+.diff-line.meta {
+  color: var(--text-dim);
+}
+
+.diff-line.context {
+  color: var(--text);
+}
+
 .composer .btn-primary {
   margin-top: 0;
   height: fit-content;
