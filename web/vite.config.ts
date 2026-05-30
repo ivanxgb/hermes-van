@@ -28,4 +28,19 @@ export default defineConfig({
       "~": "/src",
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // Split heavy third-party deps into their own chunks so the
+        // initial app shell stays small. React/wouter ship together
+        // (always needed); markdown + sanitizer is its own chunk
+        // (only needed once a chat opens); webauthn lazy-splits with
+        // SetupPage/LoginPage automatically.
+        manualChunks: {
+          "vendor-react": ["react", "react-dom", "wouter"],
+          "vendor-markdown": ["marked", "dompurify"],
+        },
+      },
+    },
+  },
 });
