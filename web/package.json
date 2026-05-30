@@ -15,16 +15,28 @@
   },
   "dependencies": {
     "@hono/node-server": "^1.13.7",
+    "@node-rs/argon2": "^2.0.2",
+    "better-sqlite3": "npm:better-sqlite3-multiple-ciphers@^12.0.0",
+    "better-sqlite3-multiple-ciphers": "^12.0.0",
+    "drizzle-orm": "^0.36.4",
     "hono": "^4.6.16",
+    "pino": "^9.5.0",
+    "pino-pretty": "^11.3.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "ulid": "^2.3.0",
+    "zod": "^3.24.1"
   },
   "devDependencies": {
     "@hono/vite-dev-server": "^0.18.1",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.10.5",
     "@types/react": "^19.0.7",
     "@types/react-dom": "^19.0.3",
     "@vitejs/plugin-react": "^4.3.4",
+    "@vitest/coverage-v8": "^2.1.8",
+    "drizzle-kit": "^0.29.1",
+    "tsx": "^4.19.2",
     "typescript": "^5.7.3",
     "vite": "^6.0.7",
     "vitest": "^2.1.8"
