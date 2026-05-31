@@ -89,6 +89,9 @@
 
 html {
   scroll-behavior: smooth;
+  /* Set the canvas color on the root element too so iOS rubber-band
+     bouncing or any overscroll reveals the right colour, not white. */
+  background: var(--canvas);
 }
 
 body {
@@ -102,8 +105,9 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* Remove the grid pattern; keep the canvas calm. */
-  min-height: 100vh;
+  /* Use dynamic viewport units everywhere — iOS 15.4+ shrinks 100vh by
+     the URL bar height, dvh tracks the actual visible area. */
+  min-height: 100dvh;
 }
 
 code,
@@ -116,11 +120,26 @@ html,
 body {
   overflow: hidden;
   overscroll-behavior: none;
+  /* Block horizontal rubber-band specifically — that's what reveals
+     the dark/light panels when the user swipes horizontally on top
+     of the sidebar or main pane. */
+  overscroll-behavior-x: none;
+  /* Stop iOS Safari from re-running scroll-bounce on the body when a
+     nested scroller (like .messages) is at its edge. */
+  -webkit-overflow-scrolling: auto;
 }
 
-#app {
-  min-height: 100vh;
+#root {
   min-height: 100dvh;
+  background: var(--canvas);
+  /* Respect the iPhone notch + home indicator. The chat shell handles
+     internal padding; this just makes sure the canvas extends under
+     the safe areas (with the right colour) instead of going white. */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  box-sizing: border-box;
 }
 
 /* ── LAYOUT ─────────────────────────── */
@@ -484,9 +503,10 @@ code {
 .chat-shell {
   display: grid;
   grid-template-columns: 280px 1fr;
-  height: 100vh;
+  /* Pure dvh — old 100vh overcounts on iOS by URL bar height. */
   height: 100dvh;
   background: var(--bg);
+  overflow: hidden;
 }
 
 .sidebar {
@@ -643,8 +663,8 @@ code {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  height: 100vh;
   height: 100dvh;
+  overflow: hidden;
 }
 
 /* ── HEADER (Command Center) ────────────
@@ -1743,7 +1763,6 @@ code {
     position: fixed;
     top: 0;
     left: 0;
-    height: 100vh;
     height: 100dvh;
     width: min(85vw, 320px);
     max-height: none;
@@ -1752,7 +1771,12 @@ code {
     z-index: 100;
     transform: translateX(-100%);
     transition: transform 0.18s ease-out;
-    background: var(--bg);
+    background: var(--canvas);
+    /* Block horizontal pan/swipe on the sidebar so iOS doesn't trigger
+       its back/forward gesture (which reveals a white peek of the prior
+       page). Vertical scroll inside chat-list still works. */
+    touch-action: pan-y;
+    overscroll-behavior: contain;
   }
   .chat-shell.sidebar-open .sidebar {
     transform: translateX(0);
@@ -1762,9 +1786,12 @@ code {
     display: block;
   }
   .chat-main {
-    height: 100vh;
     height: 100dvh;
     min-height: 0;
+    /* Same logic — kill iOS edge-swipe back/forward gesture, but keep
+       vertical scroll for the messages list. */
+    touch-action: pan-y;
+    overscroll-behavior: contain;
   }
   .hamburger {
     display: flex;
