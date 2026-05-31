@@ -4,13 +4,13 @@
  *
  * Open via Cmd/Ctrl+K. Type to fuzzy-filter. Enter to run.
  *
- * Commands are sourced from a static registry (cli/web parity) plus the
- * dynamic chat list. Future: pull /v1/capabilities for gateway-side
- * commands, but the static registry covers the common case and avoids
- * an extra round-trip per palette open.
+ * Slash commands come from the live gateway registry via `useCommands()`,
+ * so the palette mirrors what the gateway actually accepts (plus plugin
+ * commands). No hardcoded list.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Chat } from "../lib/api";
+import { useCommands, fuzzyMatchCommands } from "../lib/use-commands";
 
 export interface PaletteCommand {
   id: string;
@@ -44,19 +44,6 @@ function fuzzyMatch(haystack: string, needle: string): boolean {
   return i === n.length;
 }
 
-/** Subset of CLI slash commands that map to web actions. */
-export const SLASH_COMMANDS = [
-  { name: "/new", desc: "Start a new chat" },
-  { name: "/clear", desc: "Clear current chat (delete & recreate)" },
-  { name: "/help", desc: "Show keyboard shortcuts" },
-  { name: "/model", desc: "Change model for the current chat" },
-  { name: "/settings", desc: "Open settings" },
-  { name: "/capabilities", desc: "Browse skills and toolsets" },
-  { name: "/jobs", desc: "Browse scheduled cron jobs" },
-  { name: "/fork", desc: "Fork the current chat" },
-  { name: "/logout", desc: "Sign out" },
-];
-
 export function CommandPalette({
   open,
   onClose,
@@ -70,6 +57,8 @@ export function CommandPalette({
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  // Only fetch commands while the palette is mounted with open=true.
+  const slash = useCommands(open);
 
   // Reset state on each open
   useEffect(() => {
@@ -84,12 +73,12 @@ export function CommandPalette({
   const items = useMemo<PaletteCommand[]>(() => {
     const isSlash = query.startsWith("/");
     if (isSlash) {
-      return SLASH_COMMANDS.filter((s) => fuzzyMatch(s.name, query)).map((s) => ({
-        id: `slash:${s.name}`,
-        label: s.name,
-        hint: s.desc,
+      return fuzzyMatchCommands(slash.commands, query).map((c) => ({
+        id: `slash:${c.name}`,
+        label: `/${c.name}${c.args_hint ? ` ${c.args_hint}` : ""}`,
+        hint: c.description,
         group: "slash" as const,
-        run: () => onSlash(s.name),
+        run: () => onSlash(`/${c.name}`),
       }));
     }
     const actions: PaletteCommand[] = [
@@ -124,7 +113,7 @@ export function CommandPalette({
     return [...chatItems, ...actions].filter((cmd) =>
       fuzzyMatch(cmd.label, query),
     );
-  }, [chats, onLogout, onNewChat, onSelectChat, onSettings, onSlash, query]);
+  }, [chats, onLogout, onNewChat, onSelectChat, onSettings, onSlash, query, slash.commands]);
 
   // Clamp active when items shrinks
   useEffect(() => {
@@ -187,6 +176,12 @@ export function CommandPalette({
           autoComplete="off"
           spellCheck={false}
         />
+        {query.startsWith("/") && slash.status === "loading" ? (
+          <div className="palette-loading">…loading commands</div>
+        ) : null}
+        {query.startsWith("/") && slash.status === "error" ? (
+          <div className="palette-error">gateway error: {slash.error}</div>
+        ) : null}
         <ul
           id="palette-listbox"
           role="listbox"

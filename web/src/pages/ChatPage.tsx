@@ -38,7 +38,7 @@ import {
   getSlashMatches,
   type SlashMatch,
 } from "../components/SlashAutocomplete";
-import { SLASH_COMMANDS } from "../components/CommandPalette";
+import { useCommands } from "../lib/use-commands";
 import { VoiceInput } from "../components/VoiceInput";
 import { FileAttachButton } from "../components/FileAttachButton";
 import { CopyButton } from "../components/CopyButton";
@@ -71,9 +71,12 @@ export function ChatPage() {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [slashActive, setSlashActive] = useState(0);
+  // Live slash commands from the gateway. Hook caches across opens.
+  const slashCommands = useCommands();
   const slashMatches = useMemo<SlashMatch[]>(
-    () => (input.includes("\n") ? [] : getSlashMatches(input)),
-    [input],
+    () =>
+      input.includes("\n") ? [] : getSlashMatches(slashCommands.commands, input),
+    [input, slashCommands.commands],
   );
   useEffect(() => {
     if (slashActive >= slashMatches.length) setSlashActive(0);
@@ -289,10 +292,10 @@ export function ChatPage() {
     // If the entire input is a known slash command, execute it instead
     // of sending it as a message to the gateway.
     const trimmed = input.trim();
-    const exact = SLASH_COMMANDS.find((c) => c.name === trimmed);
+    const exact = slashCommands.commands.find((c) => `/${c.name}` === trimmed);
     if (exact) {
       setInput("");
-      runSlash(exact.name);
+      runSlash(`/${exact.name}`);
       return;
     }
     setError(null);

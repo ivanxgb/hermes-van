@@ -110,6 +110,86 @@ export async function listJobs(): Promise<Array<Record<string, unknown>>> {
   return parsed.jobs ?? [];
 }
 
+/** GET /v1/providers — list authenticated model providers. */
+export async function listProviders(): Promise<{
+  providers: Array<Record<string, unknown>>;
+  current: { provider: string; model: string };
+}> {
+  const env = loadEnv();
+  const res = await fetch(`${env.HERMES_VAN_GATEWAY_URL}/v1/providers`, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${env.HERMES_VAN_GATEWAY_KEY}` },
+  });
+  const text = await res.text();
+  if (!res.ok) throw new GatewayError(res.status, text);
+  const parsed = JSON.parse(text) as {
+    data?: Array<Record<string, unknown>>;
+    current?: { provider?: string; model?: string };
+  };
+  return {
+    providers: parsed.data ?? [],
+    current: {
+      provider: parsed.current?.provider ?? "",
+      model: parsed.current?.model ?? "",
+    },
+  };
+}
+
+/** POST /v1/model/switch — switch active model. */
+export async function switchModel(input: {
+  model: string;
+  provider?: string;
+  scope?: "session" | "global";
+}): Promise<Record<string, unknown>> {
+  const env = loadEnv();
+  const body: Record<string, unknown> = {
+    model: input.model,
+    scope: input.scope ?? "session",
+  };
+  if (input.provider) body["provider"] = input.provider;
+
+  const res = await fetch(`${env.HERMES_VAN_GATEWAY_URL}/v1/model/switch`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify(body),
+  });
+  const text = await res.text();
+  if (!res.ok) throw new GatewayError(res.status, text);
+  return JSON.parse(text) as Record<string, unknown>;
+}
+
+/** GET /v1/commands — list slash commands available on the gateway. */
+export async function listCommands(): Promise<Array<Record<string, unknown>>> {
+  const env = loadEnv();
+  const res = await fetch(`${env.HERMES_VAN_GATEWAY_URL}/v1/commands`, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${env.HERMES_VAN_GATEWAY_KEY}` },
+  });
+  const text = await res.text();
+  if (!res.ok) throw new GatewayError(res.status, text);
+  const parsed = JSON.parse(text) as { data?: Array<Record<string, unknown>> };
+  return parsed.data ?? [];
+}
+
+/** GET /v1/profile — active Hermes profile + home directory. */
+export async function getProfile(): Promise<{
+  profile: string;
+  home: string;
+}> {
+  const env = loadEnv();
+  const res = await fetch(`${env.HERMES_VAN_GATEWAY_URL}/v1/profile`, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${env.HERMES_VAN_GATEWAY_KEY}` },
+  });
+  const text = await res.text();
+  if (!res.ok) throw new GatewayError(res.status, text);
+  const parsed = JSON.parse(text) as { profile?: string; home?: string };
+  return {
+    profile: parsed.profile ?? "default",
+    home: parsed.home ?? "",
+  };
+}
+
 /** POST /api/sessions/{id}/fork — branch a session, returns new session info. */
 export async function forkSession(
   upstreamSessionId: string,

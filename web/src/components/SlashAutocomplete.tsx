@@ -5,21 +5,33 @@
  * textarea with matching commands; ↑/↓ navigates, Tab/Enter completes
  * (replaces input with the full command name + space), Esc dismisses.
  *
- * The popup is purely presentational — keyboard handling lives in the
- * composer's onKeyDown so it can intercept before form submit.
+ * Source of commands is the live gateway registry via `useCommands()`,
+ * so the list reflects whatever the gateway actually accepts (built-in
+ * commands filtered for gateway availability + plugin commands).
  */
 import type { CSSProperties } from "react";
-import { SLASH_COMMANDS } from "./CommandPalette";
+import type { CommandRecord } from "../lib/api";
+import { matchSlashCommands } from "../lib/use-commands";
 
 export interface SlashMatch {
-  name: string;
+  name: string; // includes leading slash, e.g. "/new"
   desc: string;
+  argsHint?: string;
 }
 
-export function getSlashMatches(input: string): SlashMatch[] {
-  if (!input.startsWith("/")) return [];
-  const q = input.toLowerCase();
-  return SLASH_COMMANDS.filter((c) => c.name.toLowerCase().startsWith(q));
+/**
+ * Convert the registry into the shape the composer keyboard handler
+ * expects, restricted to commands whose name starts with `input`.
+ */
+export function getSlashMatches(
+  commands: CommandRecord[],
+  input: string,
+): SlashMatch[] {
+  return matchSlashCommands(commands, input).map((c) => ({
+    name: `/${c.name}`,
+    desc: c.description,
+    argsHint: c.args_hint || undefined,
+  }));
 }
 
 interface Props {
@@ -54,7 +66,10 @@ export function SlashAutocomplete({ matches, active, onPick, onHover }: Props) {
             onPick(m);
           }}
         >
-          <span className="slash-name">{m.name}</span>
+          <span className="slash-name">
+            {m.name}
+            {m.argsHint ? <span className="slash-args"> {m.argsHint}</span> : null}
+          </span>
           <span className="slash-desc">{m.desc}</span>
         </button>
       ))}

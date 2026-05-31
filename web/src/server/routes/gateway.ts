@@ -14,7 +14,16 @@
 import { Hono } from "hono";
 import { ulid } from "ulid";
 import { authRequired } from "../middleware";
-import { listSkills, listToolsets, listJobs, forkSession } from "../gateway/client";
+import {
+  listSkills,
+  listToolsets,
+  listJobs,
+  forkSession,
+  listProviders,
+  switchModel,
+  listCommands,
+  getProfile,
+} from "../gateway/client";
 import { getDb } from "../db";
 import { forUser } from "../db/scoped";
 import { logger } from "../lib/logger";
@@ -66,6 +75,77 @@ gatewayRoutes.get("/jobs", async (c) => {
     return c.json({ jobs: trimmed });
   } catch (err) {
     logger.warn({ err }, "gateway listJobs failed");
+    return c.json(
+      { error: "Gateway error", detail: err instanceof Error ? err.message : String(err) },
+      502 as never,
+    );
+  }
+});
+
+gatewayRoutes.get("/providers", async (c) => {
+  try {
+    const data = await listProviders();
+    return c.json(data);
+  } catch (err) {
+    logger.warn({ err }, "gateway listProviders failed");
+    return c.json(
+      { error: "Gateway error", detail: err instanceof Error ? err.message : String(err) },
+      502 as never,
+    );
+  }
+});
+
+gatewayRoutes.post("/model/switch", async (c) => {
+  let body: Record<string, unknown>;
+  try {
+    body = (await c.req.json()) as Record<string, unknown>;
+  } catch {
+    return c.json({ error: "Invalid JSON" }, 400);
+  }
+
+  const model = typeof body["model"] === "string" ? (body["model"] as string).trim() : "";
+  const provider = typeof body["provider"] === "string" ? (body["provider"] as string).trim() : undefined;
+  const rawScope = typeof body["scope"] === "string" ? (body["scope"] as string).trim().toLowerCase() : "session";
+  const scope: "session" | "global" = rawScope === "global" ? "global" : "session";
+
+  if (!model && !provider) {
+    return c.json({ error: "Either 'model' or 'provider' is required" }, 400);
+  }
+
+  try {
+    const result = await switchModel({ model, provider, scope });
+    return c.json(result);
+  } catch (err) {
+    logger.warn({ err }, "gateway switchModel failed");
+    if (err instanceof Error && err.message.includes("Gateway returned 400")) {
+      return c.json({ error: "Invalid switch", detail: err.message }, 400);
+    }
+    return c.json(
+      { error: "Gateway error", detail: err instanceof Error ? err.message : String(err) },
+      502 as never,
+    );
+  }
+});
+
+gatewayRoutes.get("/commands", async (c) => {
+  try {
+    const commands = await listCommands();
+    return c.json({ commands });
+  } catch (err) {
+    logger.warn({ err }, "gateway listCommands failed");
+    return c.json(
+      { error: "Gateway error", detail: err instanceof Error ? err.message : String(err) },
+      502 as never,
+    );
+  }
+});
+
+gatewayRoutes.get("/profile", async (c) => {
+  try {
+    const profile = await getProfile();
+    return c.json(profile);
+  } catch (err) {
+    logger.warn({ err }, "gateway getProfile failed");
     return c.json(
       { error: "Gateway error", detail: err instanceof Error ? err.message : String(err) },
       502 as never,

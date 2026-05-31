@@ -1,60 +1,101 @@
 /**
- * ModelSelector — drill-down popup for picking which model the active
- * chat should run against.
+ * ModelSelector — drill-down popover backed by live gateway data.
+ *
+ * Data source: GET /api/gateway/providers (proxy to /v1/providers on the
+ * Hermes gateway). The list of providers and their models is whatever the
+ * gateway sees in config.yaml + has working credentials for — same source
+ * Telegram /model uses. There is no hardcoded list anywhere in the FE.
  *
  * UX:
- *   - First view: list of providers (Kiro, Anthropic, Vertex AI, …)
- *     with a small caption showing how many models each one carries.
- *   - Tap a provider → drill into its model list. Back arrow returns.
- *   - Type in the search box at any level → flat result list filtered
- *     across every provider (escapes the drill).
- *   - Footer offers Custom… (free-form id) and "Use gateway default"
- *     when a model is currently set.
+ *   - Pill in the chat header shows "<provider · model>" of the active
+ *     selection. Tap to open.
+ *   - First view: providers (with model count + "current" badge on the
+ *     gateway-default provider).
+ *   - Tap a provider → drill into its models. Back arrow returns.
+ *   - Type in the search box → flat results across every provider.
+ *   - Foot row: "Set as default globally" persists via /v1/model/switch
+ *     scope=global. Without that, picking a model just sets the chat-local
+ *     model (passed on every /v1/runs request).
  *
- * State stays local; the caller owns the actual patch via onPick.
+ * Picking a model fires `onPick(modelId, providerSlug)`. Caller decides
+ * how to persist (chat-local vs global). The component itself never
+ * mutates global config unless the user explicitly clicks the global btn.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { MODELS, type ModelOption, modelDisplay } from "../lib/models";
+import { useProviders, fetchProviders } from "../lib/use-providers";
+import { gateway, type ProviderRecord } from "../lib/api";
 
 interface Props {
   /** Current model id on the chat (or null = gateway default). */
   value: string | null;
-  /** Called when the user picks a model or clears it (null). */
-  onPick: (id: string | null) => void;
+  /**
+   * Called when the user picks a model. `providerSlug` is the matching
+   * provider slug from the gateway, useful for caller analytics or to
+   * scope future overrides. The caller persists the choice.
+   */
+  onPick: (modelId: string | null, providerSlug: string | null) => void;
   /** Disabled while a run is streaming. */
   disabled?: boolean;
 }
 
-type View =
-  | { kind: "providers" }
-  | { kind: "models"; provider: string }
-  | { kind: "search"; query: string };
+interface FlatMatch {
+  modelId: string;
+  providerSlug: string;
+  providerLabel: string;
+}
+
+/**
+ * Pretty label for the pill: prefer the human "ProviderLabel · model" shape
+ * when we know the provider, otherwise fall back to the raw id.
+ */
+function pillLabel(
+  modelId: string | null,
+  providers: ProviderRecord[],
+  fallbackCurrentProvider: string,
+  fallbackCurrentModel: string,
+): string {
+  if (!modelId) {
+    if (fallbackCurrentModel) {
+      const owner = providers.find((p) => p.slug === fallbackCurrentProvider);
+      return owner
+        ? `${owner.label} · ${fallbackCurrentModel}`
+        : fallbackCurrentModel;
+    }
+    return "default";
+  }
+  const owner = providers.find((p) => (p.models ?? []).includes(modelId));
+  return owner ? `${owner.label} · ${modelId}` : modelId;
+}
 
 export function ModelSelector({ value, onPick, disabled }: Props) {
   const [open, setOpen] = useState(false);
-  const [view, setView] = useState<View>({ kind: "providers" });
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
+  const [drillSlug, setDrillSlug] = useState<string | null>(null);
+  const [pendingGlobal, setPendingGlobal] = useState(false);
+  const [globalError, setGlobalError] = useState<string | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  // Reset on each open. If the chat has a model from a known provider,
-  // open straight to that provider's list so the current pick is right
-  // there — saves a tap.
+  const providersState = useProviders(open);
+  const providers = providersState.data?.providers ?? [];
+  const currentProvider = providersState.data?.current.provider ?? "";
+  const currentModel = providersState.data?.current.model ?? "";
+
+  // On open: reset, focus, and if the current model belongs to a known
+  // provider, drill straight to that provider so the active pick is
+  // visible without a tap.
   useEffect(() => {
     if (!open) return;
     setQuery("");
     setActive(0);
-    const current = MODELS.find((m) => m.id === value);
-    setView(
-      current
-        ? { kind: "models", provider: current.provider }
-        : { kind: "providers" },
-    );
+    setGlobalError(null);
+    const owner = providers.find((p) => (p.models ?? []).includes(value ?? ""));
+    setDrillSlug(owner?.slug ?? null);
     requestAnimationFrame(() => inputRef.current?.focus());
-  }, [open, value]);
+  }, [open, value, providers]);
 
-  // Click outside / Escape closes.
+  // Click-outside / Escape closes.
   useEffect(() => {
     if (!open) return;
     function onDocClick(e: MouseEvent) {
@@ -64,8 +105,8 @@ export function ModelSelector({ value, onPick, disabled }: Props) {
     }
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") {
-        if (view.kind === "models" && !query) {
-          setView({ kind: "providers" });
+        if (drillSlug && !query) {
+          setDrillSlug(null);
         } else {
           setOpen(false);
         }
@@ -77,65 +118,79 @@ export function ModelSelector({ value, onPick, disabled }: Props) {
       document.removeEventListener("mousedown", onDocClick);
       document.removeEventListener("keydown", onKey);
     };
-  }, [open, view, query]);
-
-  // Provider summary for the first view.
-  const providers = useMemo(() => {
-    const out = new Map<string, ModelOption[]>();
-    for (const m of MODELS) {
-      if (!out.has(m.provider)) out.set(m.provider, []);
-      out.get(m.provider)!.push(m);
-    }
-    return Array.from(out.entries());
-  }, []);
-
-  // Flat search results when the user types.
-  const searchMatches = useMemo<ModelOption[]>(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return [];
-    return MODELS.filter(
-      (m) =>
-        m.id.toLowerCase().includes(q) ||
-        m.label.toLowerCase().includes(q) ||
-        m.provider.toLowerCase().includes(q),
-    );
-  }, [query]);
+  }, [open, drillSlug, query]);
 
   const inSearch = query.trim().length > 0;
-  const inModels = view.kind === "models" && !inSearch;
-  const modelList = inModels
-    ? MODELS.filter((m) => m.provider === view.provider)
-    : [];
+  const inDrill = drillSlug !== null && !inSearch;
+  const drillProvider = useMemo(
+    () => (drillSlug ? providers.find((p) => p.slug === drillSlug) : null),
+    [providers, drillSlug],
+  );
 
-  function commit(m: ModelOption) {
+  const searchMatches = useMemo<FlatMatch[]>(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+    const out: FlatMatch[] = [];
+    for (const p of providers) {
+      for (const m of p.models ?? []) {
+        if (
+          m.toLowerCase().includes(q) ||
+          p.label.toLowerCase().includes(q) ||
+          p.slug.toLowerCase().includes(q)
+        ) {
+          out.push({ modelId: m, providerSlug: p.slug, providerLabel: p.label });
+        }
+      }
+    }
+    return out;
+  }, [providers, query]);
+
+  function commit(modelId: string, providerSlug: string) {
     setOpen(false);
-    onPick(m.id);
+    onPick(modelId, providerSlug);
   }
 
-  function pickCustom() {
+  function clearLocal() {
     setOpen(false);
-    const next = window.prompt(
-      "Custom model id\nEmpty to use gateway default.",
-      value ?? "",
-    );
-    if (next === null) return;
-    const trimmed = next.trim();
-    onPick(trimmed.length === 0 ? null : trimmed);
+    onPick(null, null);
   }
 
-  function clear() {
-    setOpen(false);
-    onPick(null);
+  async function applyGlobal(modelId: string, providerSlug: string) {
+    setPendingGlobal(true);
+    setGlobalError(null);
+    try {
+      await gateway.switchModel({
+        model: modelId,
+        provider: providerSlug,
+        scope: "global",
+      });
+      // Refresh provider data so `is_current` reflects the new default.
+      await fetchProviders(true);
+      await providersState.refresh();
+      setOpen(false);
+      onPick(modelId, providerSlug);
+    } catch (err) {
+      setGlobalError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setPendingGlobal(false);
+    }
   }
 
-  // Pick the active list for keyboard navigation. Providers, models,
-  // or search results — whichever is on screen.
-  const navList: { type: "provider" | "model"; key: string; data: unknown }[] =
-    inSearch
-      ? searchMatches.map((m) => ({ type: "model", key: m.id, data: m }))
-      : inModels
-        ? modelList.map((m) => ({ type: "model", key: m.id, data: m }))
-        : providers.map(([p, ms]) => ({ type: "provider", key: p, data: ms }));
+  // Keyboard navigation list.
+  type NavItem =
+    | { kind: "provider"; data: ProviderRecord }
+    | { kind: "model"; modelId: string; providerSlug: string; providerLabel: string };
+
+  const navList: NavItem[] = inSearch
+    ? searchMatches.map((m) => ({ kind: "model" as const, ...m }))
+    : inDrill && drillProvider
+      ? (drillProvider.models ?? []).map((m) => ({
+          kind: "model" as const,
+          modelId: m,
+          providerSlug: drillProvider.slug,
+          providerLabel: drillProvider.label,
+        }))
+      : providers.map((p) => ({ kind: "provider" as const, data: p }));
 
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "ArrowDown") {
@@ -152,20 +207,24 @@ export function ModelSelector({ value, onPick, disabled }: Props) {
       e.preventDefault();
       const item = navList[active];
       if (!item) return;
-      if (item.type === "provider") {
-        setView({ kind: "models", provider: item.key });
+      if (item.kind === "provider") {
+        setDrillSlug(item.data.slug);
         setActive(0);
       } else {
-        commit(item.data as ModelOption);
+        commit(item.modelId, item.providerSlug);
       }
       return;
     }
-    if (e.key === "ArrowLeft" && inModels && !query) {
+    if (e.key === "ArrowLeft" && inDrill && !query) {
       e.preventDefault();
-      setView({ kind: "providers" });
+      setDrillSlug(null);
       setActive(0);
     }
   }
+
+  // Active model id is either the chat-local override (`value`) or the
+  // gateway default if no override is set.
+  const activeModelId = value ?? currentModel;
 
   return (
     <div className="model-selector" ref={wrapRef}>
@@ -178,9 +237,11 @@ export function ModelSelector({ value, onPick, disabled }: Props) {
         aria-disabled={disabled}
         disabled={disabled}
         data-testid="model-pill"
-        title={value ?? "Using gateway default"}
+        title={value ?? `Using gateway default (${currentModel || "none"})`}
       >
-        <span className="model-pill-label">{modelDisplay(value)}</span>
+        <span className="model-pill-label">
+          {pillLabel(value, providers, currentProvider, currentModel)}
+        </span>
         <span className="model-pill-caret" aria-hidden="true">▾</span>
       </button>
 
@@ -191,12 +252,12 @@ export function ModelSelector({ value, onPick, disabled }: Props) {
           data-testid="model-popover"
         >
           <div className="model-head">
-            {inModels ? (
+            {inDrill && drillProvider ? (
               <button
                 type="button"
                 className="model-back"
                 onClick={() => {
-                  setView({ kind: "providers" });
+                  setDrillSlug(null);
                   setActive(0);
                 }}
                 aria-label="Back to providers"
@@ -209,8 +270,8 @@ export function ModelSelector({ value, onPick, disabled }: Props) {
               ref={inputRef}
               className="model-search"
               placeholder={
-                inModels
-                  ? `Search ${view.provider}…`
+                inDrill && drillProvider
+                  ? `Search ${drillProvider.label}…`
                   : "Search providers and models…"
               }
               value={query}
@@ -225,6 +286,16 @@ export function ModelSelector({ value, onPick, disabled }: Props) {
             />
           </div>
 
+          {providersState.status === "loading" && providers.length === 0 ? (
+            <div className="model-loading">…loading providers</div>
+          ) : null}
+
+          {providersState.status === "error" ? (
+            <div className="model-error" data-testid="model-error">
+              gateway error: {providersState.error}
+            </div>
+          ) : null}
+
           <div className="model-list">
             {inSearch ? (
               searchMatches.length === 0 ? (
@@ -232,77 +303,75 @@ export function ModelSelector({ value, onPick, disabled }: Props) {
               ) : (
                 searchMatches.map((m, i) => (
                   <button
-                    key={m.id}
+                    key={`${m.providerSlug}/${m.modelId}`}
                     type="button"
                     role="option"
                     aria-selected={i === active}
                     className={`model-item ${i === active ? "active" : ""} ${
-                      m.id === value ? "current" : ""
+                      m.modelId === activeModelId ? "current" : ""
                     }`}
-                    onClick={() => commit(m)}
+                    onClick={() => commit(m.modelId, m.providerSlug)}
                     onMouseEnter={() => setActive(i)}
-                    data-testid={`model-item-${m.id}`}
+                    data-testid={`model-item-${m.modelId}`}
                   >
                     <div className="model-item-main">
-                      <span className="model-item-label">{m.label}</span>
+                      <span className="model-item-label">{m.modelId}</span>
                       <span className="model-item-provider">
-                        {m.provider}
+                        {m.providerLabel}
                       </span>
                     </div>
-                    <span className="model-item-tags">
-                      {(m.tags ?? []).map((t) => (
-                        <span key={t} className="model-tag">
-                          {t}
-                        </span>
-                      ))}
-                    </span>
                   </button>
                 ))
               )
-            ) : inModels ? (
-              modelList.map((m, i) => (
-                <button
-                  key={m.id}
-                  type="button"
-                  role="option"
-                  aria-selected={i === active}
-                  className={`model-item ${i === active ? "active" : ""} ${
-                    m.id === value ? "current" : ""
-                  }`}
-                  onClick={() => commit(m)}
-                  onMouseEnter={() => setActive(i)}
-                  data-testid={`model-item-${m.id}`}
-                >
-                  <span className="model-item-label">{m.label}</span>
-                  <span className="model-item-tags">
-                    {(m.tags ?? []).map((t) => (
-                      <span key={t} className="model-tag">
-                        {t}
-                      </span>
-                    ))}
-                  </span>
-                </button>
-              ))
+            ) : inDrill && drillProvider ? (
+              (drillProvider.models ?? []).length === 0 ? (
+                <div className="model-empty">no models reported</div>
+              ) : (
+                (drillProvider.models ?? []).map((m, i) => (
+                  <button
+                    key={m}
+                    type="button"
+                    role="option"
+                    aria-selected={i === active}
+                    className={`model-item ${i === active ? "active" : ""} ${
+                      m === activeModelId ? "current" : ""
+                    }`}
+                    onClick={() => commit(m, drillProvider.slug)}
+                    onMouseEnter={() => setActive(i)}
+                    data-testid={`model-item-${m}`}
+                  >
+                    <span className="model-item-label">{m}</span>
+                    {drillProvider.is_current && m === currentModel ? (
+                      <span className="model-item-tag">default</span>
+                    ) : null}
+                  </button>
+                ))
+              )
+            ) : providers.length === 0 && providersState.status === "ready" ? (
+              <div className="model-empty">no providers configured</div>
             ) : (
-              providers.map(([p, ms], i) => (
+              providers.map((p, i) => (
                 <button
-                  key={p}
+                  key={p.slug}
                   type="button"
                   role="option"
                   aria-selected={i === active}
                   className={`model-provider-item ${
                     i === active ? "active" : ""
-                  }`}
+                  } ${p.is_current ? "current" : ""}`}
                   onClick={() => {
-                    setView({ kind: "models", provider: p });
+                    setDrillSlug(p.slug);
                     setActive(0);
                   }}
                   onMouseEnter={() => setActive(i)}
-                  data-testid={`model-provider-${p}`}
+                  data-testid={`model-provider-${p.slug}`}
                 >
-                  <span className="model-provider-name">{p}</span>
+                  <span className="model-provider-name">{p.label}</span>
                   <span className="model-provider-meta">
-                    {ms.length} model{ms.length === 1 ? "" : "s"}
+                    {p.is_current ? (
+                      <span className="model-provider-current">default</span>
+                    ) : null}
+                    {p.total_models} model{p.total_models === 1 ? "" : "s"}
                     <span className="model-provider-caret">›</span>
                   </span>
                 </button>
@@ -311,23 +380,39 @@ export function ModelSelector({ value, onPick, disabled }: Props) {
           </div>
 
           <div className="model-foot">
-            <button
-              type="button"
-              className="model-foot-btn"
-              onClick={pickCustom}
-              data-testid="model-custom"
-            >
-              Custom…
-            </button>
+            {value && providers.length > 0 ? (
+              (() => {
+                const owner = providers.find((p) =>
+                  (p.models ?? []).includes(value),
+                );
+                if (!owner) return null;
+                return (
+                  <button
+                    type="button"
+                    className="model-foot-btn"
+                    disabled={pendingGlobal}
+                    onClick={() => applyGlobal(value, owner.slug)}
+                    data-testid="model-set-global"
+                  >
+                    {pendingGlobal ? "saving…" : "Set as default globally"}
+                  </button>
+                );
+              })()
+            ) : null}
             {value ? (
               <button
                 type="button"
                 className="model-foot-btn"
-                onClick={clear}
+                onClick={clearLocal}
                 data-testid="model-clear"
               >
                 Use gateway default
               </button>
+            ) : null}
+            {globalError ? (
+              <div className="model-foot-error" data-testid="model-foot-error">
+                {globalError}
+              </div>
             ) : null}
           </div>
         </div>

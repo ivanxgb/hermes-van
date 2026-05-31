@@ -313,10 +313,61 @@ export interface JobRecord {
   origin?: { platform?: string; chat_name?: string; chat_id?: string } | null;
 }
 
+export interface ProviderRecord {
+  slug: string;
+  name: string;
+  label: string;
+  is_current: boolean;
+  is_user_defined: boolean;
+  models: string[];
+  total_models: number;
+  source: string;
+  api_url: string;
+}
+
+export interface ProvidersResponse {
+  providers: ProviderRecord[];
+  current: { provider: string; model: string };
+}
+
+export interface ModelSwitchResponse {
+  object: "hermes.model_switch";
+  success: boolean;
+  scope: "session" | "global";
+  model: string;
+  provider: string;
+  provider_label: string;
+  base_url: string;
+  api_mode: string;
+  provider_changed: boolean;
+  warning?: string;
+  resolved_via_alias?: string;
+}
+
+export interface CommandRecord {
+  name: string;
+  description: string;
+  category: string;
+  aliases: string[];
+  args_hint: string;
+  subcommands: string[];
+  source: "builtin" | "plugin";
+}
+
+export interface ProfileRecord {
+  profile: string;
+  home: string;
+}
+
 export const gateway = {
   skills: () => api.get<{ skills: SkillRecord[] }>("/api/gateway/skills"),
   toolsets: () => api.get<{ toolsets: ToolsetRecord[] }>("/api/gateway/toolsets"),
   jobs: () => api.get<{ jobs: JobRecord[] }>("/api/gateway/jobs"),
+  providers: () => api.get<ProvidersResponse>("/api/gateway/providers"),
+  switchModel: (input: { model: string; provider?: string; scope?: "session" | "global" }) =>
+    api.post<ModelSwitchResponse>("/api/gateway/model/switch", input),
+  commands: () => api.get<{ commands: CommandRecord[] }>("/api/gateway/commands"),
+  profile: () => api.get<ProfileRecord>("/api/gateway/profile"),
   forkChat: (chatId: string) =>
     api.post<{ chat: Chat; upstreamSession: Record<string, unknown> }>(
       `/api/gateway/chats/${chatId}/fork`,
