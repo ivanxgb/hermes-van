@@ -278,10 +278,10 @@
         <div class="body">
           <h3>Mover commits a branch limpia</h3>
           <p>
-            Higiene de git. Mis 2 commits del selector están en <code>vertex-pr</code> por error
-            (cero código de Vertex en ellos, solo herencia del nombre de la branch activa).
-            Crear <code>feat/api-server-model-selector</code> desde <code>main</code>, mover commits ahí,
-            dejar <code>vertex-pr</code> exactamente como estaba.
+            Higiene de git. Los 2 commits del selector están en una branch heredada con
+            nombre engañoso. Crear <code>feat/api-server-model-selector</code> desde
+            <code>main</code>, mover los commits ahí, dejar la branch original exactamente
+            como estaba.
           </p>
         </div>
         <div class="meta">~5 min<br>cero riesgo</div>
@@ -398,31 +398,6 @@
           </p>
         </div>
         <div class="meta">user-side</div>
-      </div>
-
-      <div class="item">
-        <span class="badge parked">03.b</span>
-        <div class="body">
-          <h3>Plugin Vertex de hermes-agent roto</h3>
-          <p>
-            Cada restart del gateway loguea
-            <code>register() takes 0 positional arguments but 1 was given</code>.
-            Es deuda en el repo upstream NousResearch, no en hermes-van. No bloquea el selector de modelos.
-          </p>
-        </div>
-        <div class="meta">upstream</div>
-      </div>
-
-      <div class="item">
-        <span class="badge blocked">03.c</span>
-        <div class="body">
-          <h3>Vertex billing 403</h3>
-          <p>
-            Proyecto GCP <code>claude-code-725</code> en <em>dunning</em> — bloquea Gemini/Claude vía
-            Vertex. Independiente de Hermes; se resuelve en GCP Console → Billing.
-          </p>
-        </div>
-        <div class="meta">gcp-side</div>
       </div>
     </div>
 
