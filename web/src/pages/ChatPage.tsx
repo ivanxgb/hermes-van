@@ -339,6 +339,22 @@ export function ChatPage() {
     }
   }
 
+  // UI-only slash commands — handled locally without hitting the gateway.
+  // Anything not in this set is forwarded as plain input to the agent,
+  // which handles its own slash commands (/goal, /skills, /topic, /usage,
+  // /jobs-list, /reload-mcp, etc.) server-side.
+  const UI_LOCAL_SLASH = new Set([
+    "/new",
+    "/settings",
+    "/capabilities",
+    "/jobs",
+    "/fork",
+    "/logout",
+    "/help",
+    "/clear",
+    "/model",
+  ]);
+
   function runSlash(slash: string) {
     if (slash === "/new") void onNewChat();
     else if (slash === "/settings") setLocation("/settings");
@@ -359,13 +375,32 @@ export function ChatPage() {
       }
       void onChangeModel(selectedId);
     } else {
-      alert(`${slash} is not implemented yet`);
+      // Gateway-handled command (or unknown). Forward verbatim as a
+      // user message — the agent will receive it on its next turn and
+      // run the command itself. This is the same path Telegram and
+      // CLI clients use, so the behavior stays consistent.
+      if (!selectedId) {
+        alert("Open a chat first to run a command.");
+        return;
+      }
+      void startChatRun(selectedId, slash, { userId: auth.user?.userId ?? "" }).catch(
+        (err) => setError(err instanceof Error ? err.message : "Failed to run command"),
+      );
     }
   }
 
   function pickSlash(cmd: SlashMatch) {
-    setInput("");
-    runSlash(cmd.name);
+    // For UI-local commands, just run them. For gateway commands,
+    // populate the input with the command + space so the user can
+    // type any args before sending.
+    if (UI_LOCAL_SLASH.has(cmd.name)) {
+      setInput("");
+      runSlash(cmd.name);
+      return;
+    }
+    // Pre-fill the composer with "<cmd> " so the user can keep typing args.
+    setInput(`${cmd.name} `);
+    setSlashActive(0);
   }
 
   async function onStop() {
