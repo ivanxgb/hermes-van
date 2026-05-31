@@ -28,6 +28,21 @@ if (process.env["NODE_ENV"] !== "test") {
   app.use("*", honoLogger((message) => logger.info({ component: "http" }, message)));
 }
 
+// Server start timestamp — used by the client heartbeat (/api/version) to
+// detect restarts. If the client's first observed startedAt changes, the
+// server got restarted and the SPA should reload to re-establish SSE +
+// pick up any new bundle.
+const SERVER_STARTED_AT = Date.now();
+
+app.get("/api/version", (c) => {
+  return c.json({
+    service: "hermes-van",
+    version: "0.1.0",
+    startedAt: SERVER_STARTED_AT,
+    buildId: process.env["HERMES_VAN_BUILD_ID"] ?? "dev",
+  });
+});
+
 app.get("/api/health", async (c) => {
   const env = loadEnv();
   let gateway: { ok: boolean; latencyMs: number; error?: string } = {

@@ -32,6 +32,7 @@ import { useScrollAnchor } from "../lib/scroll-anchor";
 import { estimateTokens, formatTokens } from "../lib/token-estimate";
 import { deriveChatTitle } from "../lib/derive-title";
 import { CommandPalette } from "../components/CommandPalette";
+import { ChatOverflowMenu } from "../components/ChatOverflowMenu";
 import { SearchPalette } from "../components/SearchPalette";
 import { ModelSelector } from "../components/ModelSelector";
 import { ActivityStream } from "../components/ActivityStream";
@@ -547,9 +548,42 @@ export function ChatPage() {
                 <span></span>
                 <span></span>
               </button>
-              <h2 className="chat-title-lg" data-testid="active-chat-title">
-                {selectedChat.title}
-              </h2>
+              <div className="chat-head-title">
+                <h2 className="chat-title-lg" data-testid="active-chat-title">
+                  {selectedChat.title}
+                </h2>
+                {(() => {
+                  const state = focusedRun?.pendingApproval
+                    ? "approval"
+                    : focusedRun?.status === "streaming"
+                      ? "streaming"
+                      : focusedRun?.status === "failed"
+                        ? "failed"
+                        : "ready";
+                  const label =
+                    state === "streaming"
+                      ? "Running"
+                      : state === "approval"
+                        ? "Waiting approval"
+                        : state === "failed"
+                          ? "Failed"
+                          : "Ready";
+                  const model = selectedChat.model || "default";
+                  return (
+                    <span
+                      className="agent-status"
+                      data-state={state}
+                      data-testid="agent-status"
+                      title={`${label} · ${model}`}
+                    >
+                      <span className="agent-status-dot" aria-hidden />
+                      <span className="agent-status-label">
+                        {label} · <span className="mono">{model}</span>
+                      </span>
+                    </span>
+                  );
+                })()}
+              </div>
               <div className="chat-head-actions">
                 <ModelSelector
                   value={selectedChat.model ?? null}
@@ -567,7 +601,7 @@ export function ChatPage() {
                   </button>
                 ) : null}
                 <button
-                  className="btn-text"
+                  className="btn-text chat-head-desktop"
                   type="button"
                   onClick={() => void onForkChat(selectedChat.id)}
                   data-testid="fork-btn"
@@ -576,13 +610,17 @@ export function ChatPage() {
                   fork
                 </button>
                 <a
-                  className="btn-text"
+                  className="btn-text chat-head-desktop"
                   href={`/api/chats/${selectedChat.id}/export.md`}
                   data-testid="export-md"
                   title="Export this chat as markdown"
                 >
                   export.md
                 </a>
+                <ChatOverflowMenu
+                  onFork={() => void onForkChat(selectedChat.id)}
+                  exportHref={`/api/chats/${selectedChat.id}/export.md`}
+                />
               </div>
             </header>
 
@@ -700,51 +738,7 @@ export function ChatPage() {
                   grouped={input.trim() === "/"}
                 />
               ) : null}
-              <textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  // Slash autocomplete keyboard handling — only when
-                  // matches are visible. Tab and Enter (without Shift)
-                  // commit; arrows navigate; Escape clears.
-                  if (slashMatches.length > 0) {
-                    if (e.key === "ArrowDown") {
-                      e.preventDefault();
-                      setSlashActive((i) => Math.min(slashMatches.length - 1, i + 1));
-                      return;
-                    }
-                    if (e.key === "ArrowUp") {
-                      e.preventDefault();
-                      setSlashActive((i) => Math.max(0, i - 1));
-                      return;
-                    }
-                    if (e.key === "Tab" || (e.key === "Enter" && !e.shiftKey)) {
-                      e.preventDefault();
-                      const cmd = slashMatches[slashActive];
-                      if (cmd) pickSlash(cmd);
-                      return;
-                    }
-                    if (e.key === "Escape") {
-                      e.preventDefault();
-                      setInput("");
-                      return;
-                    }
-                  }
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    void onSubmit(e as unknown as React.FormEvent);
-                  }
-                }}
-                placeholder={
-                  streaming
-                    ? "Streaming… (this chat) — switch tabs freely"
-                    : "Send a message (Enter to send, Shift+Enter for newline)"
-                }
-                disabled={streaming}
-                rows={3}
-                data-testid="composer-input"
-              />
-              <div className="composer-actions">
+              <div className="composer-bar" data-streaming={streaming}>
                 <FileAttachButton
                   disabled={streaming}
                   chatId={selectedId ?? undefined}
@@ -756,22 +750,99 @@ export function ChatPage() {
                     });
                   }}
                 />
-                <VoiceInput
-                  disabled={streaming}
-                  onTranscript={(chunk, isFinal) => {
-                    // Only commit final chunks to the input. Interim
-                    // results would cause the textarea to reset on every
-                    // partial transcription as the speech engine
-                    // refines its guess; appending only on final keeps
-                    // the visible text stable.
-                    if (!isFinal) return;
-                    setInput((prev) =>
-                      prev.length > 0 && !prev.endsWith(" ")
-                        ? `${prev} ${chunk.trim()}`
-                        : `${prev}${chunk.trim()}`,
-                    );
+                <textarea
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    // Slash autocomplete keyboard handling — only when
+                    // matches are visible. Tab and Enter (without Shift)
+                    // commit; arrows navigate; Escape clears.
+                    if (slashMatches.length > 0) {
+                      if (e.key === "ArrowDown") {
+                        e.preventDefault();
+                        setSlashActive((i) => Math.min(slashMatches.length - 1, i + 1));
+                        return;
+                      }
+                      if (e.key === "ArrowUp") {
+                        e.preventDefault();
+                        setSlashActive((i) => Math.max(0, i - 1));
+                        return;
+                      }
+                      if (e.key === "Tab" || (e.key === "Enter" && !e.shiftKey)) {
+                        e.preventDefault();
+                        const cmd = slashMatches[slashActive];
+                        if (cmd) pickSlash(cmd);
+                        return;
+                      }
+                      if (e.key === "Escape") {
+                        e.preventDefault();
+                        setInput("");
+                        return;
+                      }
+                    }
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      void onSubmit(e as unknown as React.FormEvent);
+                    }
                   }}
+                  placeholder={
+                    streaming
+                      ? "Add more context… agent is running"
+                      : "Message Hermes…  (try / for commands)"
+                  }
+                  rows={1}
+                  data-testid="composer-input"
                 />
+                <div className="composer-actions">
+                  <VoiceInput
+                    disabled={streaming}
+                    onTranscript={(chunk, isFinal) => {
+                      // Only commit final chunks to the input. Interim
+                      // results would cause the textarea to reset on every
+                      // partial transcription as the speech engine
+                      // refines its guess; appending only on final keeps
+                      // the visible text stable.
+                      if (!isFinal) return;
+                      setInput((prev) =>
+                        prev.length > 0 && !prev.endsWith(" ")
+                          ? `${prev} ${chunk.trim()}`
+                          : `${prev}${chunk.trim()}`,
+                      );
+                    }}
+                  />
+                  {streaming ? (
+                    <button
+                      type="button"
+                      className="btn-secondary btn-sm"
+                      onClick={onStop}
+                      data-testid="composer-stop"
+                    >
+                      Stop
+                    </button>
+                  ) : (
+                    <button
+                      type="submit"
+                      className="btn-primary"
+                      disabled={!canSend}
+                      data-testid="composer-send"
+                      aria-label="Send message"
+                    >
+                      ↑
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="composer-meta">
+                <span className="composer-hint">
+                  <kbd>/</kbd>
+                  <span>commands</span>
+                  <span aria-hidden> · </span>
+                  <kbd>↵</kbd>
+                  <span>send</span>
+                  <span aria-hidden> · </span>
+                  <kbd>⇧↵</kbd>
+                  <span>newline</span>
+                </span>
                 {input.trim().length > 0 ? (
                   <span
                     className="composer-tokens"
@@ -781,14 +852,6 @@ export function ChatPage() {
                     {formatTokens(estimateTokens(input))}
                   </span>
                 ) : null}
-                <button
-                  type="submit"
-                  className="btn-primary"
-                  disabled={!canSend}
-                  data-testid="composer-send"
-                >
-                  {streaming ? "Streaming…" : "Send"}
-                </button>
               </div>
             </form>
           </>

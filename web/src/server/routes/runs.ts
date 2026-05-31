@@ -24,6 +24,7 @@ import { getDb } from "../db";
 import { forUser } from "../db/scoped";
 import { ulid } from "../lib/id";
 import { logger } from "../lib/logger";
+import { pushToUser } from "../lib/push";
 import {
   createRun,
   resolveApproval,
@@ -192,6 +193,10 @@ runRoutes.get("/:runId/events", async (c) => {
             event: "run.completed",
             data: JSON.stringify({ runId: localRunId, messageId }),
           });
+          // Fire-and-forget web push so the user gets a native ping when
+          // their tab is backgrounded. Best-effort: don't block stream
+          // close on push delivery, swallow errors.
+          void notifyOnComplete(user.id, messageId, run.chatId, scoped);
           break;
         } else if (ev === "run.failed") {
           const errMsg = String(event["error"] ?? "run failed");
@@ -334,3 +339,37 @@ runRoutes.post("/:runId/approval", csrfRequired, async (c) => {
 
   return c.json({ ok: true });
 });
+
+// ─── Push notifications on run completion ─────────────────────────────
+//
+// Sends a Web Push to the user when their assistant message finishes.
+// The browser shows a native notification when the tab is backgrounded;
+// when the tab is foregrounded, the OS often suppresses it (which is
+// what we want — they're already looking at the stream).
+//
+// We pull the chat title and a 90-char preview of the answer for the
+// notification body. Failures are swallowed: push is supplementary,
+// not load-bearing.
+
+async function notifyOnComplete(
+  userId: string,
+  messageId: string,
+  chatId: string,
+  scoped: ReturnType<typeof forUser>,
+): Promise<void> {
+  try {
+    const message = scoped.messages.byId(messageId);
+    const chat = scoped.chats.byId(chatId);
+    if (!message || message.role !== "assistant") return;
+    const preview = (message.content || "").slice(0, 120).trim();
+    const title = chat?.title || "hermes-van";
+    await pushToUser(userId, {
+      title,
+      body: preview ? `${preview}${message.content.length > 120 ? "…" : ""}` : "Run completed.",
+      tag: `hv-run-${chatId}`,
+      url: `/chat`,
+    });
+  } catch (err) {
+    logger.debug({ err: String(err), userId, messageId }, "push notify failed");
+  }
+}

@@ -28,6 +28,10 @@ WorkingDirectory=%h/projects/hermes-van/web
 # Use absolute path to pnpm — systemd doesn't read your shell profile.
 # Adjust if pnpm lives elsewhere (which pnpm).
 ExecStart=/usr/bin/env pnpm hermes-van:start
+# Best-effort heal of orphan streaming messages from the previous
+# shutdown. The `-` prefix tells systemd to ignore non-zero exits so a
+# missing/locked DB doesn't block startup.
+ExecStartPre=-/usr/bin/env pnpm hermes-van:heal
 Restart=on-failure
 RestartSec=5s
 TimeoutStopSec=15s

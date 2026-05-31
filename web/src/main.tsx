@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { UpdateBanner } from "./components/UpdateBanner";
+import { RestartBanner } from "./components/RestartBanner";
 import { bootTheme } from "./lib/theme";
 import "./index.css";
 
@@ -17,6 +18,7 @@ createRoot(rootEl).render(
   <StrictMode>
     <App />
     <UpdateBanner />
+    <RestartBanner />
   </StrictMode>,
 );
 

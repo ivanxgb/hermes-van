@@ -18,6 +18,7 @@ import { logger } from "./logger";
 import { loadEnv } from "./env";
 import { getDb } from "../db";
 import { forUser } from "../db/scoped";
+import * as schema from "../db/schema";
 
 let configured = false;
 
@@ -115,4 +116,50 @@ export async function pushToUser(userId: string, payload: PushPayload): Promise<
 /** Test-only: reset configured flag so a new env can be picked up. */
 export function _resetVapidCache(): void {
   configured = false;
+}
+
+/**
+ * Push a payload to EVERY active subscription regardless of user.
+ *
+ * Used by the SIGTERM hook so the server can tell every connected
+ * client "I'm restarting, reload when you can." Bounded: caps total
+ * fanout at 200 to avoid making shutdown wait on a giant queue.
+ *
+ * Returns counts; same shape as pushToUser.
+ */
+export async function pushToAll(payload: PushPayload, opts?: { limitMs?: number }): Promise<PushResult> {
+  if (!ensureConfigured()) {
+    return { sent: 0, failed: 0, removed: 0 };
+  }
+  const raw = getDb();
+  const subs = raw
+    .select()
+    .from(schema.pushSubscriptions)
+    .limit(200)
+    .all();
+  if (subs.length === 0) return { sent: 0, failed: 0, removed: 0 };
+
+  let sent = 0;
+  let failed = 0;
+  const limitMs = opts?.limitMs ?? 4000;
+  const deadline = Date.now() + limitMs;
+
+  await Promise.allSettled(
+    subs.map(async (s) => {
+      if (Date.now() > deadline) return;
+      try {
+        await webpush.sendNotification(
+          { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
+          JSON.stringify(payload),
+          { TTL: 30 },
+        );
+        sent++;
+      } catch {
+        failed++;
+        // Don't bother updating fail counters on shutdown — we're dying.
+      }
+    }),
+  );
+
+  return { sent, failed, removed: 0 };
 }

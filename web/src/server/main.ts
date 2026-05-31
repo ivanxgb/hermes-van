@@ -17,6 +17,7 @@ import { existsSync } from "node:fs";
 import app from "./index";
 import { loadEnv } from "./lib/env";
 import { logger } from "./lib/logger";
+import { pushToAll } from "./lib/push";
 
 const env = loadEnv();
 
@@ -81,11 +82,40 @@ const server = serve(
 
 function shutdown(signal: string): void {
   logger.info({ signal }, "received signal, shutting down");
-  server.close(() => {
-    logger.info({ signal }, "shutdown complete");
-    process.exit(0);
-  });
-  // Give in-flight requests a grace period before forcing exit.
+
+  // Best-effort web-push fanout so subscribers know to reload. Capped
+  // at 4s so we don't block systemd's stop timeout.
+  const restartNotice = pushToAll(
+    {
+      title: "hermes-van restarting",
+      body: "Server is restarting. Reload the app when you're back.",
+      tag: "hv-restart",
+      url: "/chat",
+    },
+    { limitMs: 4000 },
+  )
+    .then((r) =>
+      logger.info({ ...r, signal }, "shutdown push fanout"),
+    )
+    .catch((err) =>
+      logger.warn({ err: String(err), signal }, "shutdown push fanout failed"),
+    );
+
+  Promise.race([
+    restartNotice,
+    new Promise((resolve) => setTimeout(resolve, 4500)),
+  ])
+    .then(() => {
+      server.close(() => {
+        logger.info({ signal }, "shutdown complete");
+        process.exit(0);
+      });
+    })
+    .catch(() => {
+      server.close(() => process.exit(1));
+    });
+
+  // Hard cap: regardless of fanout result, force exit after grace.
   setTimeout(() => {
     logger.warn({ signal }, "shutdown timeout, forcing exit");
     process.exit(1);

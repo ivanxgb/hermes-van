@@ -1,42 +1,41 @@
-/* hermes-van — refined cockpit tokens
+/* hermes-van — Command Center tokens
  *
- * Design intent: "mission control instrumentation for an autonomous
- * copilot." Brushed-aluminum surfaces, bone text, phosphor accent for
- * live activity, copper for active tools, signal red for failure.
- *
- * The previous palette (#050505 black, #6e8eff blue, #1f1f1f borders,
- * grid pattern) read as a generic "dark tech product." This palette
- * exists in a specific world: cool graphite cabinet, warm bone display,
- * a single phosphor LED that means something.
+ * Design intent: "agent command center" — premium dark, sober, technical.
+ * Linear/Raycast/Warp clarity, not cyberpunk-terminal noise. Phosphor
+ * mint for live signal, copper for active tools, signal red for failure,
+ * a violet alt-accent for sessions/runs. See
+ * docs/hermes_agent_command_center_redesign.md for the spec.
  */
 
 :root {
   /* ── Primitives: graphite cabinet ──────────────────────────────── */
-  --canvas: #0e1014;          /* base — cool graphite, not pitch black */
-  --surface-1: #14161c;       /* one elevation up */
-  --surface-2: #191c23;       /* two — cards, focused chat row */
-  --surface-3: #1f232b;       /* three — popovers, model selector */
-  --inset: #0b0d11;           /* inputs are inset, slightly darker */
+  --canvas: #0b0d10;          /* base */
+  --surface-1: #12161c;       /* surface */
+  --surface-2: #181d24;       /* surface raised — cards, focused row */
+  --surface-3: #1f242c;       /* popovers, model selector */
+  --inset: #07090c;           /* inputs are inset */
 
-  /* ── Borders: layered rgba so they whisper ─────────────────────── */
+  /* ── Borders: tuned with the spec's #252B35 ────────────────────── */
   --line-1: rgba(255, 255, 255, 0.04);  /* hairline */
-  --line-2: rgba(255, 255, 255, 0.07);  /* standard */
-  --line-3: rgba(255, 255, 255, 0.12);  /* emphasis */
-  --line-focus: rgba(168, 230, 197, 0.45); /* focus rings (phosphor) */
+  --line-2: #252b35;                    /* standard */
+  --line-3: rgba(255, 255, 255, 0.14);  /* emphasis */
+  --line-focus: rgba(139, 224, 198, 0.45); /* focus rings (phosphor) */
 
-  /* ── Foreground: bone, not blue-white ──────────────────────────── */
-  --ink-1: #ededea;           /* primary text */
-  --ink-2: #a8a8a3;           /* secondary */
-  --ink-3: #6f6f6b;           /* tertiary, metadata */
-  --ink-4: #4a4a47;           /* muted, disabled */
+  /* ── Foreground: per spec ──────────────────────────────────────── */
+  --ink-1: #f2f5f8;           /* primary text */
+  --ink-2: #9ba3af;           /* secondary */
+  --ink-3: #636b78;           /* tertiary, metadata */
+  --ink-4: #3f4754;           /* muted, disabled */
 
   /* ── Accents: signal-bearing only ──────────────────────────────── */
-  --phosphor: #a8e6c5;        /* live / streaming / running */
-  --phosphor-dim: #5a8a73;    /* phosphor at rest */
+  --phosphor: #8be0c6;        /* live / streaming / running / success */
+  --phosphor-dim: #4f8a76;    /* phosphor at rest */
+  --violet: #a78bfa;          /* alt accent — runs, sessions, agents */
+  --violet-dim: #6e5cab;
   --copper: #d4a574;          /* active tool, hot trace */
   --copper-dim: #8a6e4e;
-  --signal: #f87171;          /* failure */
-  --amber: #f5c87a;           /* caution / approval pending */
+  --signal: #ef6461;          /* failure */
+  --amber: #f6c177;           /* caution / approval pending */
 
   /* ── Radii: refined, not razor sharp ───────────────────────────── */
   --r-1: 4px;                 /* inputs, small chips */
@@ -55,10 +54,10 @@
 
   /* ── Type ───────────────────────────────────────────────────────── */
   --font-sans:
-    "Geist", "Inter var", "Inter", -apple-system, BlinkMacSystemFont,
+    "Inter", "Geist", "Inter var", -apple-system, BlinkMacSystemFont,
     ui-sans-serif, system-ui, sans-serif;
   --font-mono:
-    "Geist Mono", "JetBrains Mono", ui-monospace, SFMono-Regular,
+    "JetBrains Mono", "Geist Mono", ui-monospace, SFMono-Regular,
     "Courier New", monospace;
 
   /* ── Legacy aliases ─────────────────────────────────────────────
@@ -648,48 +647,97 @@ code {
   height: 100dvh;
 }
 
+/* ── HEADER (Command Center) ────────────
+ *
+ * Compact, fixed top bar. Title + agent state on the left, model + run
+ * controls on the right. Mobile: secondary actions go behind a scroll
+ * row, the title row stays single-line.
+ */
 .chat-head {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
-  gap: 12px;
-  padding: 18px 28px;
-  border-bottom: 1px solid var(--border);
+  gap: 10px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--line-2);
+  background: var(--canvas);
+  min-height: 56px;
+}
+
+.chat-head-title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 
 .chat-title-lg {
-  flex: 1;
-  min-width: 0;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
-  color: var(--text);
-  letter-spacing: -0.01em;
+  color: var(--ink-1);
+  letter-spacing: -0.005em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.2;
 }
+
+.agent-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0;
+  color: var(--ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.agent-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--ink-3);
+  flex-shrink: 0;
+}
+
+.agent-status[data-state="ready"] .agent-status-dot { background: var(--phosphor-dim); }
+.agent-status[data-state="streaming"] .agent-status-dot {
+  background: var(--phosphor);
+  box-shadow: 0 0 0 0 rgba(139, 224, 198, 0.55);
+  animation: msg-role-pulse 1.4s ease-out infinite;
+}
+.agent-status[data-state="streaming"] { color: var(--phosphor); }
+.agent-status[data-state="approval"] .agent-status-dot { background: var(--amber); }
+.agent-status[data-state="approval"] { color: var(--amber); }
+.agent-status[data-state="failed"] .agent-status-dot { background: var(--signal); }
+.agent-status[data-state="failed"] { color: var(--signal); }
 
 @media (max-width: 768px) {
   .chat-head {
+    grid-template-columns: auto 1fr auto;
     flex-wrap: wrap;
-    padding: 12px 14px;
+    padding: 8px 12px;
     gap: 8px;
+    min-height: 52px;
   }
   .chat-head-actions {
-    flex-basis: 100%;
+    grid-column: 1 / -1;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     flex-wrap: nowrap;
     gap: 6px;
     padding-bottom: 2px;
-    /* Hide scrollbar but keep it scrollable. */
     scrollbar-width: none;
   }
   .chat-head-actions::-webkit-scrollbar {
     display: none;
   }
   .chat-title-lg {
-    font-size: 15px;
+    font-size: 13.5px;
   }
 }
 
@@ -731,29 +779,57 @@ code {
   text-align: center;
 }
 
+/* ── TIMELINE / MESSAGES ──────────────────
+ *
+ * Conversational timeline (Linear/Claude clarity), not heavy "card per
+ * message" blocks. Each turn is a compact stack: small role label on
+ * top, then body. User messages stay tight; assistant messages read
+ * like a document. No 80px gutter, no thick left border, soft hairline
+ * separator only.
+ */
 .msg {
-  display: grid;
-  grid-template-columns: 80px 1fr;
-  gap: 16px;
-  padding: 12px 16px;
-  border-left: 2px solid var(--border-strong);
-  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 0 14px;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--line-1);
 }
 
-.msg-user {
-  border-left-color: var(--accent);
+.msg:last-of-type {
+  border-bottom: 0;
 }
 
-.msg-assistant {
-  border-left-color: var(--success);
+.msg-user .msg-body {
+  color: var(--ink-1);
+  font-size: 14.5px;
+  line-height: 1.55;
 }
 
-.msg-streaming {
-  border-left-color: var(--warn);
+.msg-assistant .msg-body {
+  color: var(--ink-1);
+  font-size: 15px;
+  line-height: 1.7;
 }
 
-.msg-failed {
-  border-left-color: var(--danger);
+.msg-streaming .msg-role,
+.msg-streaming .msg-role-dot {
+  color: var(--phosphor);
+}
+
+.msg-failed .msg-role,
+.msg-failed .msg-role-dot {
+  color: var(--signal);
+}
+
+.msg-flash {
+  animation: msg-flash 1.6s ease-out;
+}
+
+@keyframes msg-flash {
+  0%   { background: rgba(139, 224, 198, 0.10); }
+  100% { background: transparent; }
 }
 
 .msg-head {
@@ -761,23 +837,53 @@ code {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 4px;
 }
 
 .msg-role {
-  font-family: "JetBrains Mono", monospace;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--text-dim);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink-2);
+}
+
+.msg-role::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--ink-3);
+  display: inline-block;
+}
+
+.msg-user .msg-role::before {
+  background: var(--violet);
+}
+
+.msg-assistant .msg-role::before {
+  background: var(--phosphor);
+}
+
+.msg-streaming .msg-role::before {
+  background: var(--phosphor);
+  box-shadow: 0 0 0 0 rgba(139, 224, 198, 0.55);
+  animation: msg-role-pulse 1.4s ease-out infinite;
+}
+
+@keyframes msg-role-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(139, 224, 198, 0.5); }
+  70%  { box-shadow: 0 0 0 6px rgba(139, 224, 198, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(139, 224, 198, 0); }
 }
 
 .msg-body {
   white-space: pre-wrap;
   word-break: break-word;
-  color: var(--text);
-  font-size: 14px;
-  line-height: 1.6;
+  color: var(--ink-1);
 }
 
 .btn-copy {
@@ -873,15 +979,134 @@ code {
   font-size: 12px;
 }
 
+/* ── COMMAND BAR (composer) ────────────
+ *
+ * Single unified bar: attach + textarea + mic + send. No more grid of
+ * "input column + actions column"; everything sits inside one rounded
+ * surface with a focus ring on the wrapper, so it reads as a Raycast/
+ * Linear-style command bar.
+ */
 .composer {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 12px;
-  padding: 16px 28px;
-  border-top: 1px solid var(--border);
-  background: var(--bg-elev);
-  align-items: end;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 12px 20px 16px;
+  border-top: 1px solid var(--line-2);
+  background: var(--canvas);
   position: relative;
+}
+
+.composer-bar {
+  display: flex;
+  align-items: end;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--surface-1);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-3);
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.composer-bar:focus-within {
+  border-color: var(--phosphor-dim);
+  box-shadow: 0 0 0 3px rgba(139, 224, 198, 0.10);
+}
+
+.composer-bar[data-streaming="true"] {
+  border-color: var(--phosphor-dim);
+}
+
+.composer textarea {
+  flex: 1;
+  background: transparent;
+  border: 0;
+  color: var(--ink-1);
+  font-family: var(--font-sans);
+  font-size: 14.5px;
+  line-height: 1.5;
+  padding: 6px 4px;
+  resize: none;
+  min-height: 28px;
+  max-height: 200px;
+  border-radius: 0;
+  outline: none;
+}
+
+.composer textarea::placeholder {
+  color: var(--ink-3);
+}
+
+.composer textarea:focus {
+  outline: none;
+  border: 0;
+}
+
+.composer-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 4px 0;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--ink-3);
+}
+
+.composer-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.composer-hint kbd {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-2);
+  background: var(--surface-1);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-1);
+  padding: 1px 5px;
+  line-height: 1.2;
+}
+
+/* Composer's primary button — render as the round "↑" send button. */
+.composer .btn-primary,
+.composer .btn-secondary {
+  margin: 0;
+  align-self: end;
+  height: 32px;
+  min-height: 32px;
+  padding: 0 14px;
+  border-radius: var(--r-2);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.composer .btn-primary {
+  background: var(--phosphor);
+  border-color: var(--phosphor);
+  color: #07090c;
+}
+
+.composer .btn-primary:hover:not(:disabled) {
+  background: #a1ebd1;
+  border-color: #a1ebd1;
+}
+
+.composer .btn-secondary {
+  border-color: var(--line-3);
+  color: var(--ink-2);
+}
+
+.composer-tokens {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0;
+  text-transform: lowercase;
+  color: var(--ink-3);
+  padding: 0 4px;
+  user-select: none;
+  white-space: nowrap;
 }
 
 /* ── SLASH AUTOCOMPLETE ───────────── */
@@ -1278,28 +1503,21 @@ code {
 }
 
 .composer textarea {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--text);
-  font-family: inherit;
-  font-size: 14px;
-  padding: 12px 14px;
-  resize: vertical;
-  min-height: 60px;
-  border-radius: 0;
+  /* Override is in the .composer block above; this older rule is
+     superseded but kept here to harden mobile zoom prevention. */
+  font-size: 14.5px;
 }
 
 .composer textarea:focus {
   outline: none;
-  border-color: var(--accent-dim);
 }
 
 /* ── COMPOSER ACTIONS (Phase 6.C) ─────── */
 .composer-actions {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  align-items: stretch;
+  flex-direction: row;
+  gap: 6px;
+  align-items: center;
 }
 
 .btn-voice {
@@ -1780,7 +1998,7 @@ code {
   white-space: nowrap;
 }
 
-.search-snippet {
+  .search-snippet {
   color: var(--text);
   font-size: 13px;
   line-height: 1.5;
@@ -2271,215 +2489,698 @@ code {
   }
 }
 
-/* ── REFINED MESSAGE BLOCKS ─────────────────────────────────────
-   Replace the harsh 80px-grid + border-left-2px treatment with a
-   softer card-style block. Role label sits above content, gutter
-   accent communicates status. */
+/* ════════════════════════════════════════════════════════════════════
+   PHASE 2 — Tool cards · Result blocks · Markdown body · Sidebar polish
+   ════════════════════════════════════════════════════════════════════ */
 
-.msg {
-  display: block;
-  grid-template-columns: none;
-  gap: 0;
-  padding: var(--s-3) var(--s-4);
-  background: var(--surface-1);
-  border: 1px solid var(--line-1);
-  border-radius: var(--r-3);
-  position: relative;
-}
-
-.msg::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 12px;
-  bottom: 12px;
-  width: 2px;
-  background: var(--line-3);
-  border-radius: 2px;
-  transition: background 200ms ease;
-}
-
-.msg-user {
-  background: var(--surface-2);
-}
-.msg-user::before {
-  background: var(--ink-3);
-}
-
-.msg-assistant::before {
-  background: var(--phosphor-dim);
-}
-
-.msg-streaming::before {
-  background: var(--copper);
-  box-shadow: 0 0 12px rgba(212, 165, 116, 0.45);
-  animation: msg-stream-pulse 1.6s ease-in-out infinite;
-}
-
-.msg-failed::before {
-  background: var(--signal);
-}
-
-@keyframes msg-stream-pulse {
-  0%, 100% { opacity: 1; }
-  50%      { opacity: 0.55; }
-}
-
-.msg-head {
-  margin-bottom: var(--s-2);
-}
-
-.msg-role {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--ink-4);
-}
-
-.msg-body {
-  font-size: 14.5px;
-  line-height: 1.65;
-  color: var(--ink-1);
-}
-
+/* ── Markdown body inside assistant messages ───────────────────── */
 .msg-body .md p {
   margin: 0 0 var(--s-3);
 }
 .msg-body .md p:last-child { margin-bottom: 0; }
 
+.msg-body .md h1,
+.msg-body .md h2,
+.msg-body .md h3 {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 18px 0 8px;
+  line-height: 1.3;
+}
+.msg-body .md h1 { font-size: 18px; }
+.msg-body .md h2 { font-size: 16px; }
+.msg-body .md h3 { font-size: 14.5px; color: var(--ink-2); }
+
+.msg-body .md ul,
+.msg-body .md ol {
+  margin: 0 0 var(--s-3) 22px;
+  padding: 0;
+}
+.msg-body .md li { margin: 2px 0; }
+
+.msg-body .md a {
+  color: var(--phosphor);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(139, 224, 198, 0.35);
+}
+.msg-body .md a:hover {
+  border-bottom-color: var(--phosphor);
+}
+
 .msg-body .md code {
-  background: var(--inset);
-  border: 1px solid var(--line-1);
+  background: var(--surface-1);
+  border: 1px solid var(--line-2);
   border-radius: var(--r-1);
   padding: 1px 6px;
-  font-size: 13px;
+  font-size: 12.5px;
+  font-family: var(--font-mono);
   color: var(--phosphor);
 }
 
 .msg-body .md pre {
   background: var(--inset);
-  border: 1px solid var(--line-1);
+  border: 1px solid var(--line-2);
   border-radius: var(--r-2);
   padding: var(--s-3) var(--s-4);
   margin: var(--s-3) 0;
   overflow-x: auto;
-  font-size: 13px;
+  font-size: 12.5px;
   line-height: 1.55;
+  font-family: var(--font-mono);
 }
 
 .msg-body .md pre code {
   background: transparent;
   border: 0;
   padding: 0;
-  color: inherit;
+  color: var(--ink-1);
   font-size: inherit;
 }
 
-/* Tighten the messages list spacing for the new card style. */
-.messages {
-  gap: var(--s-3);
-  padding: var(--s-5) var(--s-6);
+.msg-body .md blockquote {
+  margin: var(--s-3) 0;
+  padding: 6px var(--s-3);
+  border-left: 2px solid var(--line-3);
+  color: var(--ink-2);
 }
 
-@media (max-width: 768px) {
-  .messages {
-    padding: var(--s-3);
-  }
-}
-
-/* ── COMPOSER REFINEMENT ───────────────────────────────────────── */
-
-.composer {
-  background: var(--surface-1);
+.msg-body .md hr {
+  margin: var(--s-4) 0;
+  border: 0;
   border-top: 1px solid var(--line-2);
-  padding: var(--s-3) var(--s-5);
 }
 
-.composer textarea {
-  background: var(--inset);
+/* ── Result actions row (Copy / Export / etc) ──────────────────── */
+.msg-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line-1);
+  flex-wrap: wrap;
+}
+
+.msg-actions .btn-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid var(--line-2);
+  color: var(--ink-2);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 10px;
+  border-radius: var(--r-2);
+  cursor: pointer;
+  transition: border-color 120ms ease, color 120ms ease, background 120ms ease;
+  text-decoration: none;
+}
+
+.msg-actions .btn-action:hover {
+  border-color: var(--line-3);
+  color: var(--ink-1);
+  background: var(--surface-1);
+}
+
+.msg-actions .btn-action[data-variant="primary"] {
+  border-color: var(--phosphor-dim);
+  color: var(--phosphor);
+}
+.msg-actions .btn-action[data-variant="primary"]:hover {
+  border-color: var(--phosphor);
+  background: rgba(139, 224, 198, 0.06);
+}
+
+/* ── Activity stream — tool calls as compact cards ─────────────── */
+.activity {
+  border-left: 0;
+  padding-left: 0;
+  margin-bottom: 12px;
+  gap: 6px;
+}
+
+.activity-row {
+  padding: 8px 10px;
+  background: var(--surface-1);
   border: 1px solid var(--line-2);
   border-radius: var(--r-2);
-  padding: var(--s-3) var(--s-4);
-  font-size: 14px;
-  line-height: 1.55;
-  transition: border-color 150ms ease, box-shadow 150ms ease;
+  position: relative;
+  align-items: center;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.4;
 }
 
-.composer textarea:focus {
-  outline: none;
-  border-color: var(--phosphor-dim);
-  box-shadow: 0 0 0 3px rgba(168, 230, 197, 0.08);
+.activity-gutter {
+  position: static;
+  margin: 0;
+  width: 16px;
+  height: 16px;
+  font-size: 10px;
+  color: var(--ink-3);
 }
 
-/* ── BUTTONS REFINEMENT ────────────────────────────────────────── */
+.activity-kind {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  font-weight: 600;
+  flex-shrink: 0;
+}
 
-.btn-primary,
-.btn-secondary,
-.btn-danger {
+.activity-preview {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex: 1;
+}
+
+.activity-meta {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--ink-3);
+  flex-shrink: 0;
+}
+
+/* Status accents */
+.activity-tool.activity-running {
+  border-color: var(--copper-dim);
+  background: linear-gradient(
+    90deg,
+    rgba(212, 165, 116, 0.05) 0%,
+    var(--surface-1) 60%
+  );
+}
+.activity-tool.activity-running .activity-kind { color: var(--copper); }
+.activity-tool.activity-running .activity-gutter { color: var(--copper); }
+
+.activity-tool.activity-done .activity-kind { color: var(--ink-2); }
+.activity-tool.activity-done .activity-gutter { color: var(--phosphor); }
+
+.activity-tool.activity-failed {
+  border-color: rgba(239, 100, 97, 0.35);
+  background: rgba(239, 100, 97, 0.04);
+}
+.activity-tool.activity-failed .activity-kind,
+.activity-tool.activity-failed .activity-gutter { color: var(--signal); }
+
+.activity-pending .activity-kind { color: var(--phosphor); font-style: italic; }
+
+/* ── Reasoning (Thinking) — collapsed by default, secondary ─────── */
+.activity-reasoning {
+  background: transparent;
+  border: 1px dashed var(--line-2);
+}
+
+.activity-reasoning .activity-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+}
+
+.activity-reasoning .activity-kind {
+  color: var(--ink-3);
+  font-style: normal;
+  text-transform: uppercase;
+}
+
+.activity-reasoning.open {
+  background: var(--surface-1);
+  border-style: solid;
+}
+.activity-reasoning.open .activity-kind {
+  color: var(--violet);
+}
+
+.activity-reasoning .activity-gutter {
+  color: var(--ink-4);
+}
+.activity-reasoning.open .activity-gutter {
+  color: var(--violet);
+}
+
+.activity-body {
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  background: var(--inset);
+  border: 1px solid var(--line-1);
   border-radius: var(--r-2);
-  font-weight: 500;
-  letter-spacing: 0.005em;
-  transition: background 150ms ease, border-color 150ms ease,
-              color 150ms ease, transform 80ms ease;
-}
-.btn-primary:active:not(:disabled),
-.btn-secondary:active:not(:disabled) {
-  transform: translateY(1px);
-}
-
-.btn-primary {
-  background: var(--phosphor);
-  border-color: var(--phosphor);
-  color: var(--canvas);
-}
-.btn-primary:hover:not(:disabled) {
-  background: #c0eed4;
-  border-color: #c0eed4;
+  color: var(--ink-2);
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-style: italic;
+  width: 100%;
 }
 
-.btn-secondary {
-  background: var(--surface-2);
-  border-color: var(--line-3);
-}
-.btn-secondary:hover {
-  border-color: var(--ink-3);
-  background: var(--surface-3);
-}
-
-/* Sidebar should share canvas with main, only a hairline divides */
+/* ── Sidebar polish ────────────────────────────────────────────── */
 .sidebar {
   background: var(--canvas);
   border-right: 1px solid var(--line-2);
 }
 
+.sidebar-head {
+  border-bottom: 1px solid var(--line-2);
+}
+
 .chat-row {
   border-radius: 0;
-  padding: var(--s-2) var(--s-4);
+  padding: 9px 16px;
+  border-left: 2px solid transparent;
+  transition: background 120ms ease, border-color 120ms ease;
 }
+
+.chat-row:hover {
+  background: var(--surface-1);
+}
+
 .chat-row.active {
   background: var(--surface-2);
   border-left-color: var(--phosphor);
 }
 
-.chat-head {
-  background: transparent;
-  border-bottom: 1px solid var(--line-2);
+.chat-row.active .chat-title {
+  color: var(--ink-1);
 }
 
-/* Approval callout — amber, not red, so it reads as caution. */
-.approval-callout {
-  background: rgba(245, 200, 122, 0.06);
-  border-left-color: var(--amber);
+.chat-title {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--ink-2);
 }
 
-/* Live dot in sidebar should use copper while running. */
 .live-dot {
-  background: var(--copper);
-  box-shadow: 0 0 0 0 rgba(212, 165, 116, 0.55);
+  background: var(--phosphor);
+  box-shadow: 0 0 0 0 rgba(139, 224, 198, 0.55);
 }
 @keyframes pulse {
-  0%   { box-shadow: 0 0 0 0 rgba(212, 165, 116, 0.55); }
-  70%  { box-shadow: 0 0 0 8px rgba(212, 165, 116, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(212, 165, 116, 0); }
+  0%   { box-shadow: 0 0 0 0 rgba(139, 224, 198, 0.55); }
+  70%  { box-shadow: 0 0 0 8px rgba(139, 224, 198, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(139, 224, 198, 0); }
+}
+
+.unread-badge {
+  background: var(--violet);
+  color: var(--canvas);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  border-radius: 999px;
+}
+
+/* Tighten messages list spacing for the new timeline. */
+.messages {
+  gap: 18px;
+  padding: 22px 24px;
+}
+
+@media (max-width: 768px) {
+  .messages {
+    padding: 16px 14px;
+    gap: 16px;
+  }
+}
+
+/* ── Approval callout — amber caution ──────────────────────────── */
+.approval-callout {
+  background: rgba(246, 193, 119, 0.06);
+  border: 1px solid rgba(246, 193, 119, 0.30);
+  border-left: 3px solid var(--amber);
+  border-radius: var(--r-2);
+  padding: 12px 16px;
+  margin: 0 24px 12px;
+}
+
+.approval-tag {
+  color: var(--amber) !important;
+  margin-bottom: 6px;
+}
+
+.approval-cmd {
+  background: var(--inset);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-1);
+  padding: 8px 10px;
+  margin: 8px 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-1);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.approval-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+@media (max-width: 768px) {
+  .approval-callout { margin: 0 12px 12px; }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   PHASE 3 — Chat-style alignment, less log-viewer, more product
+   Based on hermes_visual_redesign_improvements.md feedback.
+   ════════════════════════════════════════════════════════════════════ */
+
+/* Messages list: vertical stack with chat-style alignment. Reset the
+   hairline separators introduced in Phase 1 — spacing carries the
+   structure now, lines are noise. */
+.messages {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 24px clamp(14px, 4vw, 28px);
+}
+
+.msg {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  max-width: 92%;
+}
+
+/* USER → right side, compact bubble */
+.msg-user {
+  align-self: flex-end;
+  align-items: flex-end;
+  max-width: min(80%, 560px);
+}
+
+.msg-user .msg-head {
+  display: none;            /* user identity is communicated by position */
+}
+
+.msg-user .msg-body {
+  background: #1c2430;
+  border: 1px solid #2d3748;
+  color: var(--ink-1);
+  padding: 10px 14px;
+  border-radius: 16px 16px 4px 16px;
+  font-size: 14.5px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.15);
+}
+
+/* HERMES → left side, document-like reading */
+.msg-assistant {
+  align-self: flex-start;
+  max-width: 100%;
+  width: 100%;
+}
+
+.msg-assistant .msg-head {
+  margin-bottom: 2px;
+}
+
+.msg-assistant .msg-role {
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--ink-2);
+}
+
+.msg-assistant .msg-role::before {
+  display: none;            /* no dot — label alone is enough */
+}
+
+.msg-assistant .msg-body {
+  background: transparent;
+  padding: 0;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--ink-1);
+}
+
+/* While streaming, the assistant label tints phosphor without a dot. */
+.msg-streaming.msg-assistant .msg-role {
+  color: var(--phosphor);
+}
+.msg-failed .msg-role {
+  color: var(--signal);
+}
+
+/* Hide the "no messages yet" log-style line when there's an empty chat. */
+.messages .empty {
+  align-self: center;
+  max-width: 320px;
+  background: var(--surface-1);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-3);
+  padding: 14px 18px;
+  margin-top: 18%;
+  text-align: center;
+}
+
+/* ── Copy / actions — small, secondary, hover-revealed ─────────── */
+.btn-copy {
+  background: transparent;
+  border: 0;
+  color: var(--ink-3);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  padding: 2px 6px;
+  cursor: pointer;
+  border-radius: var(--r-1);
+  opacity: 0;
+  transition: opacity 120ms ease, color 120ms ease, background 120ms ease;
+}
+
+.msg:hover .btn-copy,
+.btn-copy:focus-visible,
+.btn-copy-copied,
+.btn-copy-failed {
+  opacity: 0.7;
+}
+
+.btn-copy:hover {
+  color: var(--ink-1);
+  opacity: 1 !important;
+  background: var(--surface-1);
+}
+
+.btn-copy-copied { color: var(--phosphor); opacity: 1 !important; }
+.btn-copy-failed { color: var(--signal); opacity: 1 !important; }
+
+/* On touch devices keep copy visible (no hover) but de-emphasized. */
+@media (hover: none) {
+  .msg-assistant .btn-copy { opacity: 0.55; }
+}
+
+/* ── Thinking — one-line, secondary, NEVER bigger than the answer ── */
+.activity-reasoning {
+  background: transparent;
+  border: 0;
+  border-top: 1px dashed var(--line-2);
+  border-radius: 0;
+  padding: 6px 0 0;
+  margin-top: 4px;
+}
+
+.activity-reasoning .activity-toggle {
+  padding: 0;
+  gap: 8px;
+  color: var(--ink-3);
+  font-size: 12px;
+  font-family: var(--font-sans);
+}
+
+.activity-reasoning .activity-kind {
+  font-family: var(--font-sans);
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.activity-reasoning .activity-gutter {
+  width: auto;
+  height: auto;
+  margin: 0;
+  font-size: 11px;
+  color: var(--ink-4);
+}
+
+.activity-reasoning.open {
+  background: transparent;
+  border-style: dashed;
+}
+.activity-reasoning.open .activity-kind { color: var(--violet); }
+.activity-reasoning.open .activity-gutter { color: var(--violet); }
+
+.activity-reasoning .activity-preview {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--ink-4);
+  font-style: normal;
+}
+
+.activity-body {
+  margin-top: 6px;
+  padding: 10px 12px;
+  background: var(--surface-1);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-2);
+  color: var(--ink-2);
+  font-size: 12.5px;
+  font-style: normal;
+}
+
+/* Pending "thinking…" placeholder when streaming with no blocks yet. */
+.activity-pending {
+  background: transparent;
+  border: 0;
+  padding: 4px 0;
+}
+.activity-pending .activity-kind {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--phosphor);
+  font-style: normal;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 500;
+}
+
+/* ── Header: fork + export.md collapse into ⋯ menu on mobile ──── */
+.chat-head-overflow { display: none; position: relative; }
+.chat-head-desktop { display: inline-flex; }
+
+@media (max-width: 768px) {
+  .chat-head-desktop { display: none; }
+  .chat-head-overflow { display: inline-flex; }
+  .chat-head {
+    grid-template-columns: auto 1fr auto;
+    flex-wrap: nowrap;
+    padding: 8px 12px;
+  }
+  .chat-head-actions {
+    grid-column: auto;
+    flex-basis: auto;
+    overflow-x: visible;
+  }
+}
+
+.btn-overflow {
+  background: transparent;
+  border: 1px solid var(--line-2);
+  color: var(--ink-2);
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-2);
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 120ms ease, color 120ms ease;
+}
+.btn-overflow:hover { border-color: var(--line-3); color: var(--ink-1); }
+.btn-overflow[aria-expanded="true"] { border-color: var(--phosphor-dim); color: var(--ink-1); }
+
+.overflow-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 180px;
+  background: var(--surface-2);
+  border: 1px solid var(--line-3);
+  border-radius: var(--r-2);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+}
+
+.overflow-item {
+  display: block;
+  padding: 8px 10px;
+  background: transparent;
+  border: 0;
+  color: var(--ink-1);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  text-align: left;
+  text-decoration: none;
+  border-radius: var(--r-1);
+  cursor: pointer;
+}
+.overflow-item:hover { background: var(--surface-3); }
+
+/* ── Composer hint: desktop-only, focus-revealed ──────────────── */
+@media (max-width: 768px) {
+  .composer-meta {
+    display: none;
+  }
+  .composer {
+    padding: 10px 12px 12px;
+  }
+  .composer-bar {
+    padding: 6px 8px;
+  }
+}
+
+/* On desktop, show hint only when composer is focused. */
+@media (min-width: 769px) {
+  .composer-meta {
+    opacity: 0;
+    transition: opacity 150ms ease;
+    pointer-events: none;
+  }
+  .composer:focus-within .composer-meta {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+/* User can still see token count even without focus, on desktop, by
+   opacity-respecting the tokens span when input has content. */
+.composer-tokens { transition: opacity 150ms ease; }
+
+/* ── Empty state hamburger less prominent ───────────────────── */
+.empty-state h1 {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink-1);
+}
+.empty-state p.lead {
+  color: var(--ink-3);
+  font-size: 13.5px;
+}
+
+/* ── Approval callout: keep amber, but match Phase 3 spacing ─── */
+.approval-callout {
+  margin: 0 clamp(14px, 4vw, 28px) 14px;
 }
