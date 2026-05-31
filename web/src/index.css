@@ -1174,16 +1174,6 @@ code {
 }
 
 @media (max-width: 768px) {
-  .model-popover {
-    position: fixed !important;
-    top: auto !important;
-    bottom: 12px !important;
-    left: 12px !important;
-    right: 12px !important;
-    width: auto !important;
-    max-height: 70vh !important;
-    z-index: 9999;
-  }
   .model-pill-label {
     max-width: 110px;
   }

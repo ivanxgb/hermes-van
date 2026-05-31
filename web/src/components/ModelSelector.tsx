@@ -453,28 +453,32 @@ export function ModelSelector({ value, onPick, disabled }: Props) {
 }
 
 /**
- * Inline style for the portalled popover. On wide viewports we anchor to
- * the right edge of the pill and grow downward. On narrow viewports
- * (≤768px) we let CSS take over with a bottom-sheet style.
+ * Inline style for the portalled popover. Anchors the popover beneath
+ * the pill on every viewport size — `right` aligned to the pill's right
+ * edge so the popover hugs the same column. If there's not enough room
+ * below, flip above.
  */
 function popoverStyle(rect: DOMRect | null): React.CSSProperties {
   if (!rect) return { visibility: "hidden" };
   if (typeof window === "undefined") return {};
-  const isMobile = window.innerWidth <= 768;
-  if (isMobile) {
-    // CSS handles bottom-sheet positioning with !important on the rule.
-    return {};
-  }
-  const popoverWidth = Math.min(420, window.innerWidth - 24);
-  const right = Math.max(12, window.innerWidth - rect.right);
-  const top = Math.min(
-    rect.bottom + 4,
-    window.innerHeight - 100,
-  );
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const margin = 8;
+  const popoverWidth = Math.min(360, vw - margin * 2);
+  const idealTop = rect.bottom + 4;
+  const maxHeight = Math.min(420, vh - idealTop - margin);
+  // If less than 220px below, flip above
+  const flip = maxHeight < 220 && rect.top > 240;
+  const top = flip ? Math.max(margin, rect.top - 4) : idealTop;
+  const transform = flip ? "translateY(-100%)" : undefined;
+  // Right-align to pill's right edge, but never go off-screen left
+  const right = Math.max(margin, vw - rect.right);
   return {
     position: "fixed",
     top,
     right,
     width: popoverWidth,
+    maxHeight: flip ? Math.min(420, rect.top - margin) : maxHeight,
+    transform,
   };
 }
