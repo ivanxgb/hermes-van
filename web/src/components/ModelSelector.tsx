@@ -454,9 +454,9 @@ export function ModelSelector({ value, onPick, disabled }: Props) {
 
 /**
  * Inline style for the portalled popover. Anchors the popover beneath
- * the pill on every viewport size — `right` aligned to the pill's right
- * edge so the popover hugs the same column. If there's not enough room
- * below, flip above.
+ * the pill: left edge tracks the pill's left, but if it would overflow
+ * the right edge, slides left so it stays on screen. Flips above the
+ * pill if there isn't enough room below.
  */
 function popoverStyle(rect: DOMRect | null): React.CSSProperties {
   if (!rect) return { visibility: "hidden" };
@@ -464,21 +464,29 @@ function popoverStyle(rect: DOMRect | null): React.CSSProperties {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
   const margin = 8;
-  const popoverWidth = Math.min(360, vw - margin * 2);
-  const idealTop = rect.bottom + 4;
-  const maxHeight = Math.min(420, vh - idealTop - margin);
-  // If less than 220px below, flip above
-  const flip = maxHeight < 220 && rect.top > 240;
-  const top = flip ? Math.max(margin, rect.top - 4) : idealTop;
-  const transform = flip ? "translateY(-100%)" : undefined;
-  // Right-align to pill's right edge, but never go off-screen left
-  const right = Math.max(margin, vw - rect.right);
+  const width = Math.min(360, vw - margin * 2);
+
+  // Horizontal: prefer aligning to the pill's left, slide left if it
+  // would overflow the right edge, clamp to at least `margin` from the
+  // left edge of the viewport.
+  let left = rect.left;
+  if (left + width > vw - margin) left = vw - margin - width;
+  if (left < margin) left = margin;
+
+  // Vertical: drop below the pill. If the popover wouldn't fit, flip
+  // above. We use a conservative height estimate; CSS caps via
+  // maxHeight so overflow scrolls inside the popover.
+  const popHeightEstimate = 320;
+  const below = rect.bottom + 4;
+  const above = rect.top - 4 - popHeightEstimate;
+  const fitsBelow = below + popHeightEstimate <= vh - margin;
+  const top = fitsBelow ? below : Math.max(margin, above);
+
   return {
     position: "fixed",
     top,
-    right,
-    width: popoverWidth,
-    maxHeight: flip ? Math.min(420, rect.top - margin) : maxHeight,
-    transform,
+    left,
+    width,
+    maxHeight: vh - top - margin,
   };
 }
