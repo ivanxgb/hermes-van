@@ -984,7 +984,13 @@ code {
   background: var(--bg-elev);
   border: 1px solid var(--border-strong);
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
-  z-index: 80;
+  z-index: 9999;
+}
+
+.model-popover.portalled {
+  /* Portalled to <body>; positioning comes from inline style or the
+     mobile media query below. */
+  position: fixed;
 }
 
 .model-head {
@@ -1169,13 +1175,14 @@ code {
 
 @media (max-width: 768px) {
   .model-popover {
-    position: fixed;
-    top: auto;
-    bottom: 12px;
-    left: 12px;
-    right: 12px;
-    width: auto;
-    max-height: 70vh;
+    position: fixed !important;
+    top: auto !important;
+    bottom: 12px !important;
+    left: 12px !important;
+    right: 12px !important;
+    width: auto !important;
+    max-height: 70vh !important;
+    z-index: 9999;
   }
   .model-pill-label {
     max-width: 110px;

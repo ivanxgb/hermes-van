@@ -21,7 +21,8 @@
  * how to persist (chat-local vs global). The component itself never
  * mutates global config unless the user explicitly clicks the global btn.
  */
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useProviders, fetchProviders } from "../lib/use-providers";
 import { gateway, type ProviderRecord } from "../lib/api";
 
@@ -74,13 +75,32 @@ export function ModelSelector({ value, onPick, disabled }: Props) {
   const [drillSlug, setDrillSlug] = useState<string | null>(null);
   const [pendingGlobal, setPendingGlobal] = useState(false);
   const [globalError, setGlobalError] = useState<string | null>(null);
+  const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
+  const pillRef = useRef<HTMLButtonElement | null>(null);
+  const popRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const providersState = useProviders(open);
   const providers = providersState.data?.providers ?? [];
   const currentProvider = providersState.data?.current.provider ?? "";
   const currentModel = providersState.data?.current.model ?? "";
+
+  // Track the pill's rect while open so the portalled popover can anchor
+  // to it. Re-measured on scroll/resize.
+  useLayoutEffect(() => {
+    if (!open) return;
+    function measure() {
+      if (pillRef.current) setAnchorRect(pillRef.current.getBoundingClientRect());
+    }
+    measure();
+    window.addEventListener("resize", measure);
+    window.addEventListener("scroll", measure, true);
+    return () => {
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("scroll", measure, true);
+    };
+  }, [open]);
 
   // On open: reset, focus, and if the current model belongs to a known
   // provider, drill straight to that provider so the active pick is
@@ -95,11 +115,16 @@ export function ModelSelector({ value, onPick, disabled }: Props) {
     requestAnimationFrame(() => inputRef.current?.focus());
   }, [open, value, providers]);
 
-  // Click-outside / Escape closes.
+  // Click-outside / Escape closes. The popover is portalled to body so we
+  // also have to exempt clicks inside it (otherwise every option click
+  // would close before firing).
   useEffect(() => {
     if (!open) return;
     function onDocClick(e: MouseEvent) {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+      const t = e.target as Node;
+      const inWrap = wrapRef.current?.contains(t);
+      const inPop = popRef.current?.contains(t);
+      if (!inWrap && !inPop) {
         setOpen(false);
       }
     }
@@ -229,6 +254,7 @@ export function ModelSelector({ value, onPick, disabled }: Props) {
   return (
     <div className="model-selector" ref={wrapRef}>
       <button
+        ref={pillRef}
         type="button"
         className="model-pill"
         onClick={() => !disabled && setOpen((o) => !o)}
@@ -245,178 +271,210 @@ export function ModelSelector({ value, onPick, disabled }: Props) {
         <span className="model-pill-caret" aria-hidden="true">▾</span>
       </button>
 
-      {open ? (
-        <div
-          className="model-popover"
-          role="listbox"
-          data-testid="model-popover"
-        >
-          <div className="model-head">
-            {inDrill && drillProvider ? (
-              <button
-                type="button"
-                className="model-back"
-                onClick={() => {
-                  setDrillSlug(null);
-                  setActive(0);
-                }}
-                aria-label="Back to providers"
-                data-testid="model-back"
-              >
-                ←
-              </button>
-            ) : null}
-            <input
-              ref={inputRef}
-              className="model-search"
-              placeholder={
-                inDrill && drillProvider
-                  ? `Search ${drillProvider.label}…`
-                  : "Search providers and models…"
-              }
-              value={query}
-              onChange={(e) => {
-                setQuery(e.target.value);
-                setActive(0);
-              }}
-              onKeyDown={onKeyDown}
-              data-testid="model-search"
-              spellCheck={false}
-              autoComplete="off"
-            />
-          </div>
-
-          {providersState.status === "loading" && providers.length === 0 ? (
-            <div className="model-loading">…loading providers</div>
-          ) : null}
-
-          {providersState.status === "error" ? (
-            <div className="model-error" data-testid="model-error">
-              gateway error: {providersState.error}
-            </div>
-          ) : null}
-
-          <div className="model-list">
-            {inSearch ? (
-              searchMatches.length === 0 ? (
-                <div className="model-empty">no matches</div>
-              ) : (
-                searchMatches.map((m, i) => (
+      {open && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              ref={popRef}
+              className="model-popover portalled"
+              role="listbox"
+              data-testid="model-popover"
+              style={popoverStyle(anchorRect)}
+            >
+              <div className="model-head">
+                {inDrill && drillProvider ? (
                   <button
-                    key={`${m.providerSlug}/${m.modelId}`}
                     type="button"
-                    role="option"
-                    aria-selected={i === active}
-                    className={`model-item ${i === active ? "active" : ""} ${
-                      m.modelId === activeModelId ? "current" : ""
-                    }`}
-                    onClick={() => commit(m.modelId, m.providerSlug)}
-                    onMouseEnter={() => setActive(i)}
-                    data-testid={`model-item-${m.modelId}`}
+                    className="model-back"
+                    onClick={() => {
+                      setDrillSlug(null);
+                      setActive(0);
+                    }}
+                    aria-label="Back to providers"
+                    data-testid="model-back"
                   >
-                    <div className="model-item-main">
-                      <span className="model-item-label">{m.modelId}</span>
-                      <span className="model-item-provider">
-                        {m.providerLabel}
-                      </span>
-                    </div>
+                    ←
                   </button>
-                ))
-              )
-            ) : inDrill && drillProvider ? (
-              (drillProvider.models ?? []).length === 0 ? (
-                <div className="model-empty">no models reported</div>
-              ) : (
-                (drillProvider.models ?? []).map((m, i) => (
-                  <button
-                    key={m}
-                    type="button"
-                    role="option"
-                    aria-selected={i === active}
-                    className={`model-item ${i === active ? "active" : ""} ${
-                      m === activeModelId ? "current" : ""
-                    }`}
-                    onClick={() => commit(m, drillProvider.slug)}
-                    onMouseEnter={() => setActive(i)}
-                    data-testid={`model-item-${m}`}
-                  >
-                    <span className="model-item-label">{m}</span>
-                    {drillProvider.is_current && m === currentModel ? (
-                      <span className="model-item-tag">default</span>
-                    ) : null}
-                  </button>
-                ))
-              )
-            ) : providers.length === 0 && providersState.status === "ready" ? (
-              <div className="model-empty">no providers configured</div>
-            ) : (
-              providers.map((p, i) => (
-                <button
-                  key={p.slug}
-                  type="button"
-                  role="option"
-                  aria-selected={i === active}
-                  className={`model-provider-item ${
-                    i === active ? "active" : ""
-                  } ${p.is_current ? "current" : ""}`}
-                  onClick={() => {
-                    setDrillSlug(p.slug);
+                ) : null}
+                <input
+                  ref={inputRef}
+                  className="model-search"
+                  placeholder={
+                    inDrill && drillProvider
+                      ? `Search ${drillProvider.label}…`
+                      : "Search providers and models…"
+                  }
+                  value={query}
+                  onChange={(e) => {
+                    setQuery(e.target.value);
                     setActive(0);
                   }}
-                  onMouseEnter={() => setActive(i)}
-                  data-testid={`model-provider-${p.slug}`}
-                >
-                  <span className="model-provider-name">{p.label}</span>
-                  <span className="model-provider-meta">
-                    {p.is_current ? (
-                      <span className="model-provider-current">default</span>
-                    ) : null}
-                    {p.total_models} model{p.total_models === 1 ? "" : "s"}
-                    <span className="model-provider-caret">›</span>
-                  </span>
-                </button>
-              ))
-            )}
-          </div>
+                  onKeyDown={onKeyDown}
+                  data-testid="model-search"
+                  spellCheck={false}
+                  autoComplete="off"
+                />
+              </div>
 
-          <div className="model-foot">
-            {value && providers.length > 0 ? (
-              (() => {
-                const owner = providers.find((p) =>
-                  (p.models ?? []).includes(value),
-                );
-                if (!owner) return null;
-                return (
+              {providersState.status === "loading" && providers.length === 0 ? (
+                <div className="model-loading">…loading providers</div>
+              ) : null}
+
+              {providersState.status === "error" ? (
+                <div className="model-error" data-testid="model-error">
+                  gateway error: {providersState.error}
+                </div>
+              ) : null}
+
+              <div className="model-list">
+                {inSearch ? (
+                  searchMatches.length === 0 ? (
+                    <div className="model-empty">no matches</div>
+                  ) : (
+                    searchMatches.map((m, i) => (
+                      <button
+                        key={`${m.providerSlug}/${m.modelId}`}
+                        type="button"
+                        role="option"
+                        aria-selected={i === active}
+                        className={`model-item ${i === active ? "active" : ""} ${
+                          m.modelId === activeModelId ? "current" : ""
+                        }`}
+                        onClick={() => commit(m.modelId, m.providerSlug)}
+                        onMouseEnter={() => setActive(i)}
+                        data-testid={`model-item-${m.modelId}`}
+                      >
+                        <div className="model-item-main">
+                          <span className="model-item-label">{m.modelId}</span>
+                          <span className="model-item-provider">
+                            {m.providerLabel}
+                          </span>
+                        </div>
+                      </button>
+                    ))
+                  )
+                ) : inDrill && drillProvider ? (
+                  (drillProvider.models ?? []).length === 0 ? (
+                    <div className="model-empty">no models reported</div>
+                  ) : (
+                    (drillProvider.models ?? []).map((m, i) => (
+                      <button
+                        key={m}
+                        type="button"
+                        role="option"
+                        aria-selected={i === active}
+                        className={`model-item ${i === active ? "active" : ""} ${
+                          m === activeModelId ? "current" : ""
+                        }`}
+                        onClick={() => commit(m, drillProvider.slug)}
+                        onMouseEnter={() => setActive(i)}
+                        data-testid={`model-item-${m}`}
+                      >
+                        <span className="model-item-label">{m}</span>
+                        {drillProvider.is_current && m === currentModel ? (
+                          <span className="model-item-tag">default</span>
+                        ) : null}
+                      </button>
+                    ))
+                  )
+                ) : providers.length === 0 && providersState.status === "ready" ? (
+                  <div className="model-empty">no providers configured</div>
+                ) : (
+                  providers.map((p, i) => (
+                    <button
+                      key={p.slug}
+                      type="button"
+                      role="option"
+                      aria-selected={i === active}
+                      className={`model-provider-item ${
+                        i === active ? "active" : ""
+                      } ${p.is_current ? "current" : ""}`}
+                      onClick={() => {
+                        setDrillSlug(p.slug);
+                        setActive(0);
+                      }}
+                      onMouseEnter={() => setActive(i)}
+                      data-testid={`model-provider-${p.slug}`}
+                    >
+                      <span className="model-provider-name">{p.label}</span>
+                      <span className="model-provider-meta">
+                        {p.is_current ? (
+                          <span className="model-provider-current">default</span>
+                        ) : null}
+                        {p.total_models} model{p.total_models === 1 ? "" : "s"}
+                        <span className="model-provider-caret">›</span>
+                      </span>
+                    </button>
+                  ))
+                )}
+              </div>
+
+              <div className="model-foot">
+                {value && providers.length > 0 ? (
+                  (() => {
+                    const owner = providers.find((p) =>
+                      (p.models ?? []).includes(value),
+                    );
+                    if (!owner) return null;
+                    return (
+                      <button
+                        type="button"
+                        className="model-foot-btn"
+                        disabled={pendingGlobal}
+                        onClick={() => applyGlobal(value, owner.slug)}
+                        data-testid="model-set-global"
+                      >
+                        {pendingGlobal ? "saving…" : "Set as default globally"}
+                      </button>
+                    );
+                  })()
+                ) : null}
+                {value ? (
                   <button
                     type="button"
                     className="model-foot-btn"
-                    disabled={pendingGlobal}
-                    onClick={() => applyGlobal(value, owner.slug)}
-                    data-testid="model-set-global"
+                    onClick={clearLocal}
+                    data-testid="model-clear"
                   >
-                    {pendingGlobal ? "saving…" : "Set as default globally"}
+                    Use gateway default
                   </button>
-                );
-              })()
-            ) : null}
-            {value ? (
-              <button
-                type="button"
-                className="model-foot-btn"
-                onClick={clearLocal}
-                data-testid="model-clear"
-              >
-                Use gateway default
-              </button>
-            ) : null}
-            {globalError ? (
-              <div className="model-foot-error" data-testid="model-foot-error">
-                {globalError}
+                ) : null}
+                {globalError ? (
+                  <div className="model-foot-error" data-testid="model-foot-error">
+                    {globalError}
+                  </div>
+                ) : null}
               </div>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
+}
+
+/**
+ * Inline style for the portalled popover. On wide viewports we anchor to
+ * the right edge of the pill and grow downward. On narrow viewports
+ * (≤768px) we let CSS take over with a bottom-sheet style.
+ */
+function popoverStyle(rect: DOMRect | null): React.CSSProperties {
+  if (!rect) return { visibility: "hidden" };
+  if (typeof window === "undefined") return {};
+  const isMobile = window.innerWidth <= 768;
+  if (isMobile) {
+    // CSS handles bottom-sheet positioning with !important on the rule.
+    return {};
+  }
+  const popoverWidth = Math.min(420, window.innerWidth - 24);
+  const right = Math.max(12, window.innerWidth - rect.right);
+  const top = Math.min(
+    rect.bottom + 4,
+    window.innerHeight - 100,
+  );
+  return {
+    position: "fixed",
+    top,
+    right,
+    width: popoverWidth,
+  };
 }
