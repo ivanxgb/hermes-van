@@ -41,7 +41,9 @@ export const securityHeaders: MiddlewareHandler = async (c, next) => {
   c.header("Cross-Origin-Resource-Policy", "same-origin");
   c.header("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
   if (env.NODE_ENV === "production") {
-    c.header("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
+    // HSTS is emitted by Nginx (hsts/preload-eligible there). Keeping it
+    // here too caused duplicate headers; the upstream proxy is the
+    // canonical surface for transport-level security headers.
   }
 };
 

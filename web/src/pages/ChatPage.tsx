@@ -18,6 +18,7 @@ import { logout, useAuth } from "../lib/auth-store";
 import {
   closeAllStreams,
   getActiveRuns,
+  getMessageActivity,
   getTotalUnread,
   getUnreadCounts,
   loadChat,
@@ -33,6 +34,7 @@ import { deriveChatTitle } from "../lib/derive-title";
 import { CommandPalette } from "../components/CommandPalette";
 import { SearchPalette } from "../components/SearchPalette";
 import { ModelSelector } from "../components/ModelSelector";
+import { ActivityStream } from "../components/ActivityStream";
 import {
   SlashAutocomplete,
   getSlashMatches,
@@ -631,31 +633,44 @@ export function ChatPage() {
               {focused.messages.length === 0 ? (
                 <div className="empty">no messages yet — say hi</div>
               ) : (
-                focused.messages.map((m) => (
-                  <article
-                    key={m.id}
-                    className={`msg msg-${m.role} msg-${m.status}`}
-                    data-testid={`msg-${m.id}`}
-                    data-role={m.role}
-                    data-status={m.status}
-                  >
-                    <div className="msg-head">
-                      <span className="msg-role">{m.role}</span>
-                      {m.status === "completed" && m.content ? (
-                        <CopyButton text={m.content} testId={`copy-${m.id}`} />
-                      ) : null}
-                    </div>
-                    <div className="msg-body">
-                      <MessageBody
-                        content={m.content}
-                        streaming={m.status === "streaming"}
-                      />
-                      {m.status === "failed" && m.error ? (
-                        <div className="msg-error">error: {m.error}</div>
-                      ) : null}
-                    </div>
-                  </article>
-                ))
+                focused.messages.map((m) => {
+                  const isAssistant = m.role === "assistant";
+                  const activity = isAssistant
+                    ? getMessageActivity(selectedId ?? "", m.id)
+                    : [];
+                  const isStreaming = m.status === "streaming";
+                  return (
+                    <article
+                      key={m.id}
+                      className={`msg msg-${m.role} msg-${m.status}`}
+                      data-testid={`msg-${m.id}`}
+                      data-role={m.role}
+                      data-status={m.status}
+                    >
+                      <div className="msg-head">
+                        <span className="msg-role">{m.role}</span>
+                        {m.status === "completed" && m.content ? (
+                          <CopyButton text={m.content} testId={`copy-${m.id}`} />
+                        ) : null}
+                      </div>
+                      <div className="msg-body">
+                        {isAssistant ? (
+                          <ActivityStream
+                            blocks={activity}
+                            streaming={isStreaming && !m.content}
+                          />
+                        ) : null}
+                        <MessageBody
+                          content={m.content}
+                          streaming={isStreaming}
+                        />
+                        {m.status === "failed" && m.error ? (
+                          <div className="msg-error">error: {m.error}</div>
+                        ) : null}
+                      </div>
+                    </article>
+                  );
+                })
               )}
               <div ref={scroll.ref} />
             </section>
@@ -682,6 +697,7 @@ export function ChatPage() {
                   active={slashActive}
                   onPick={pickSlash}
                   onHover={setSlashActive}
+                  grouped={input.trim() === "/"}
                 />
               ) : null}
               <textarea

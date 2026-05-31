@@ -229,13 +229,27 @@ runRoutes.get("/:runId/events", async (c) => {
             event: "approval.responded",
             data: JSON.stringify({ runId: localRunId }),
           });
-        } else if (ev === "tool.progress") {
-          // Forward tool progress without persisting (UI ephemera only).
-          const { event: _e, run_id: _r, ...rest } = event as Record<string, unknown>;
+        } else if (
+          ev === "tool.progress" ||
+          ev === "tool.started" ||
+          ev === "tool.completed" ||
+          ev === "tool.failed" ||
+          ev === "reasoning.available"
+        ) {
+          // Forward agent activity events without persisting (UI ephemera).
+          // The /v1/runs SSE channel emits tool.started / tool.completed /
+          // reasoning.available directly; the older /api/sessions/.../stream
+          // channel groups them under tool.progress. Forward both shapes so
+          // the client can render an activity stream regardless of which
+          // gateway endpoint we're proxied through.
+          const { event: _e, run_id: _r, ...rest } = event as Record<
+            string,
+            unknown
+          >;
           void _e;
           void _r;
           await stream.writeSSE({
-            event: "tool.progress",
+            event: ev,
             data: JSON.stringify({ runId: localRunId, ...rest }),
           });
         }

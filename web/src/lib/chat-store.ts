@@ -50,6 +50,34 @@ export interface PendingApproval {
   receivedAt: number;
 }
 
+/**
+ * Activity blocks that aggregate tool / reasoning events the agent emits
+ * during a run. Rendered as a "what's the agent doing right now" stream
+ * inside the assistant turn so the UI never collapses to a lonely "…".
+ *
+ * Blocks are ephemeral — they live in memory for the lifetime of this
+ * tab. Reloading the page rehydrates messages from the DB but loses
+ * historical activity blocks (we'd need a server-side log to bring
+ * those back, which is out of scope for now).
+ */
+export type ActivityBlock =
+  | {
+      kind: "tool";
+      /** Local stable id so React can key the block. */
+      id: string;
+      tool: string;
+      preview?: string;
+      status: "running" | "done" | "failed";
+      durationMs?: number;
+      startedAt: number;
+    }
+  | {
+      kind: "reasoning";
+      id: string;
+      text: string;
+      receivedAt: number;
+    };
+
 interface ChatState {
   /** Server-known message log (rehydrated from /api/chats/:id/messages). */
   messages: Message[];
@@ -64,6 +92,11 @@ interface ChatState {
    * background chats finished while they were elsewhere.
    */
   unread: number;
+  /**
+   * Activity blocks captured from SSE events, keyed by assistantMessageId.
+   * Lives only in memory — see ActivityBlock docs.
+   */
+  activity: Map<string, ActivityBlock[]>;
 }
 
 type Listener = () => void;
@@ -73,6 +106,7 @@ const EMPTY_CHAT_STATE: ChatState = {
   run: null,
   lastFetchAt: 0,
   unread: 0,
+  activity: new Map(),
 };
 
 const chatStates = new Map<string, ChatState>();
@@ -89,7 +123,13 @@ function emit(chatId: string) {
 function getOrInit(chatId: string): ChatState {
   let s = chatStates.get(chatId);
   if (!s) {
-    s = { messages: [], run: null, lastFetchAt: 0, unread: 0 };
+    s = {
+      messages: [],
+      run: null,
+      lastFetchAt: 0,
+      unread: 0,
+      activity: new Map(),
+    };
     chatStates.set(chatId, s);
   }
   return s;
@@ -163,6 +203,16 @@ export function getActiveRuns(): ReadonlyMap<string, RunState> {
     if (state.run && state.run.status === "streaming") out.set(chatId, state.run);
   }
   return out;
+}
+
+/** Read the activity blocks captured for a specific assistant message. */
+export function getMessageActivity(
+  chatId: string,
+  messageId: string,
+): readonly ActivityBlock[] {
+  const state = chatStates.get(chatId);
+  if (!state) return [];
+  return state.activity.get(messageId) ?? [];
 }
 
 /**
@@ -445,6 +495,193 @@ function openStream(input: { runId: string; chatId: string; messageId: string })
       run: s.run ? { ...s.run, pendingApproval: null } : null,
     }));
   });
+
+  // ── Activity events ────────────────────────────────────────────────
+  // The gateway streams two shapes of activity events depending on which
+  // endpoint we're proxied through:
+  //   /v1/runs            → tool.started / tool.completed / tool.failed /
+  //                         reasoning.available
+  //   /api/sessions/.../  → tool.progress  (envelope around the same kinds)
+  // Both flow through here. We materialize them into ActivityBlock entries
+  // attached to the assistant message so the UI can render the agent's
+  // current work instead of an empty bubble.
+
+  let toolSeq = 0;
+  /** The first emitted block id for a given tool, so completed/failed
+   * events can update the same row instead of pushing a duplicate. */
+  const liveToolByName = new Map<string, string>();
+
+  const blockId = (prefix: string) => `${prefix}-${++toolSeq}`;
+
+  const upsertBlocks = (mutate: (prev: ActivityBlock[]) => ActivityBlock[]) =>
+    patch(chatId, (s) => {
+      const next = new Map(s.activity);
+      const prev = next.get(messageId) ?? [];
+      next.set(messageId, mutate(prev));
+      return { ...s, activity: next };
+    });
+
+  const onToolStarted = (tool: string, preview?: string) => {
+    const id = blockId("tool");
+    liveToolByName.set(tool, id);
+    upsertBlocks((prev) => [
+      ...prev,
+      {
+        kind: "tool",
+        id,
+        tool,
+        preview,
+        status: "running",
+        startedAt: Date.now(),
+      },
+    ]);
+  };
+
+  const onToolFinished = (
+    tool: string,
+    status: "done" | "failed",
+    durationMs?: number,
+  ) => {
+    const id = liveToolByName.get(tool);
+    liveToolByName.delete(tool);
+    upsertBlocks((prev) => {
+      // If we have a matching running row, mutate it in-place. Otherwise
+      // append a synthetic row so completed-without-started events from
+      // older gateways still render.
+      let updated = false;
+      const next = prev.map((b) => {
+        if (
+          b.kind === "tool" &&
+          ((id && b.id === id) || (!id && b.tool === tool && b.status === "running"))
+        ) {
+          updated = true;
+          return { ...b, status, durationMs };
+        }
+        return b;
+      });
+      if (updated) return next;
+      return [
+        ...next,
+        {
+          kind: "tool",
+          id: blockId("tool"),
+          tool,
+          status,
+          durationMs,
+          startedAt: Date.now() - (durationMs ?? 0),
+        },
+      ];
+    });
+  };
+
+  const onReasoning = (text: string) => {
+    if (!text) return;
+    upsertBlocks((prev) => [
+      ...prev,
+      {
+        kind: "reasoning",
+        id: blockId("reasoning"),
+        text,
+        receivedAt: Date.now(),
+      },
+    ]);
+  };
+
+  es.addEventListener("tool.started", (ev) => {
+    try {
+      const data = JSON.parse((ev as MessageEvent).data) as {
+        tool?: string;
+        tool_name?: string;
+        preview?: string;
+      };
+      const tool = data.tool ?? data.tool_name ?? "tool";
+      onToolStarted(tool, data.preview);
+    } catch {
+      /* ignore */
+    }
+  });
+
+  es.addEventListener("tool.completed", (ev) => {
+    try {
+      const data = JSON.parse((ev as MessageEvent).data) as {
+        tool?: string;
+        tool_name?: string;
+        duration?: number;
+        error?: boolean;
+      };
+      const tool = data.tool ?? data.tool_name ?? "tool";
+      const ms =
+        typeof data.duration === "number"
+          ? Math.round(data.duration * 1000)
+          : undefined;
+      onToolFinished(tool, data.error ? "failed" : "done", ms);
+    } catch {
+      /* ignore */
+    }
+  });
+
+  es.addEventListener("tool.failed", (ev) => {
+    try {
+      const data = JSON.parse((ev as MessageEvent).data) as {
+        tool?: string;
+        tool_name?: string;
+        duration?: number;
+      };
+      const tool = data.tool ?? data.tool_name ?? "tool";
+      const ms =
+        typeof data.duration === "number"
+          ? Math.round(data.duration * 1000)
+          : undefined;
+      onToolFinished(tool, "failed", ms);
+    } catch {
+      /* ignore */
+    }
+  });
+
+  es.addEventListener("reasoning.available", (ev) => {
+    try {
+      const data = JSON.parse((ev as MessageEvent).data) as {
+        text?: string;
+        delta?: string;
+      };
+      onReasoning(String(data.text ?? data.delta ?? ""));
+    } catch {
+      /* ignore */
+    }
+  });
+
+  // tool.progress is the legacy envelope from /api/sessions/.../stream.
+  // It carries either a started/completed kind plus tool_name, OR a
+  // reasoning delta (when tool_name === "_thinking"). Route accordingly.
+  es.addEventListener("tool.progress", (ev) => {
+    try {
+      const data = JSON.parse((ev as MessageEvent).data) as {
+        tool_name?: string;
+        delta?: string;
+        kind?: string;
+        preview?: string;
+      };
+      if (data.tool_name === "_thinking") {
+        onReasoning(String(data.delta ?? ""));
+        return;
+      }
+      const tool = data.tool_name ?? "tool";
+      if (data.kind === "completed") {
+        onToolFinished(tool, "done");
+      } else if (data.kind === "failed") {
+        onToolFinished(tool, "failed");
+      } else if (data.kind === "started" || data.kind === "running") {
+        onToolStarted(tool, data.preview);
+      } else {
+        // Best effort: treat anonymous progress as a started ping so the
+        // user at least sees the tool is alive.
+        onToolStarted(tool, data.preview);
+      }
+    } catch {
+      /* ignore */
+    }
+  });
+
   es.onerror = () => {
     if (es.readyState === EventSource.CLOSED) {
       finalize("failed", "stream closed");
