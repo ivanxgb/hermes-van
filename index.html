@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="hermes-van — cliente web autenticado para Hermes Agent. WebAuthn, multi-chat, slash commands, SSE streaming." />
+  <title>hermes-van — cliente web autenticado para Hermes Agent</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #050505;
+      --bg-elev: #0c0c0c;
+      --surface: #111111;
+      --surface-2: #161616;
+      --border: #1f1f1f;
+      --border-strong: #2a2a2a;
+      --text: #e8e8e8;
+      --text-muted: #8a8a8a;
+      --text-dim: #5a5a5a;
+      --accent: #6e8eff;
+      --accent-dim: #3a4a8a;
+      --success: #4ade80;
+      --warn: #fbbf24;
+      --danger: #ef4444;
+      --grid: rgba(255, 255, 255, 0.02);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-weight: 400;
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      background-image:
+        linear-gradient(var(--grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+      background-size: 48px 48px;
+      background-attachment: fixed;
+    }
+
+    .mono { font-family: 'JetBrains Mono', 'Courier New', monospace; }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 32px;
+    }
+
+    /* ── NAV ─────────────────────────── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(5, 5, 5, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    nav .container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 18px;
+      padding-bottom: 18px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 600;
+      font-size: 15px;
+      letter-spacing: -0.01em;
+    }
+
+    .logo-mark {
+      width: 22px;
+      height: 22px;
+      border: 1.5px solid var(--text);
+      display: grid;
+      place-items: center;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 28px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 14px;
+      transition: color 150ms ease;
+    }
+
+    .nav-links a:hover { color: var(--text); }
+
+    /* ── HERO ────────────────────────── */
+    .hero {
+      padding: 96px 0 72px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .hero-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 28px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .hero-pill .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 8px var(--success);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    h1 {
+      font-size: clamp(36px, 5vw, 56px);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.05;
+      margin-bottom: 24px;
+    }
+
+    h1 .accent { color: var(--accent); }
+
+    .hero p.lead {
+      font-size: 18px;
+      color: var(--text-muted);
+      max-width: 640px;
+      margin-bottom: 36px;
+    }
+
+    .hero-meta {
+      display: flex;
+      gap: 32px;
+      flex-wrap: wrap;
+      padding-top: 28px;
+      border-top: 1px solid var(--border);
+      margin-top: 48px;
+    }
+
+    .meta-item .label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .meta-item .value {
+      font-size: 14px;
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* ── SECTIONS ────────────────────── */
+    section {
+      padding: 80px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section-header { margin-bottom: 48px; }
+
+    .section-tag {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: var(--text-dim);
+      font-family: 'JetBrains Mono', monospace;
+      margin-bottom: 12px;
+    }
+
+    h2 {
+      font-size: 32px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      margin-bottom: 16px;
+    }
+
+    .section-subtitle {
+      color: var(--text-muted);
+      font-size: 16px;
+      max-width: 640px;
+    }
+
+    /* ── CARDS ───────────────────────── */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 24px;
+      transition: border-color 200ms ease;
+    }
+
+    .card:hover { border-color: var(--border-strong); }
+
+    .card-icon {
+      width: 32px;
+      height: 32px;
+      border: 1px solid var(--border-strong);
+      display: grid;
+      place-items: center;
+      font-size: 14px;
+      margin-bottom: 16px;
+      color: var(--accent);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .card h3 {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .card p {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    /* ── DOCS ────────────────────────── */
+    .docs-list {
+      display: grid;
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+    }
+
+    .doc-row {
+      display: grid;
+      grid-template-columns: 220px 1fr 80px;
+      padding: 18px 24px;
+      background: var(--surface);
+      gap: 16px;
+      align-items: center;
+      transition: background 150ms ease;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .doc-row:hover { background: var(--surface-2); }
+
+    .doc-name {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: var(--text);
+    }
+
+    .doc-desc {
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    .doc-status {
+      text-align: right;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
+    .doc-status.ready { color: var(--success); }
+
+    /* ── ARCHITECTURE ────────────────── */
+    .arch-diagram {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 40px 32px;
+      margin-top: 24px;
+      overflow-x: auto;
+    }
+
+    .arch-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+    }
+
+    .arch-node {
+      padding: 14px 20px;
+      border: 1px solid var(--border-strong);
+      background: var(--bg-elev);
+      min-width: 130px;
+      text-align: center;
+    }
+
+    .arch-node.client {
+      border-color: var(--accent-dim);
+      color: var(--accent);
+    }
+
+    .arch-node.security {
+      border-color: var(--success);
+      color: var(--success);
+    }
+
+    .arch-arrow {
+      color: var(--text-dim);
+      font-size: 18px;
+    }
+
+    .arch-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .arch-stack small {
+      color: var(--text-dim);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    /* ── ROADMAP ─────────────────────── */
+    .roadmap { display: flex; flex-direction: column; }
+
+    .phase {
+      display: grid;
+      grid-template-columns: 160px 1fr;
+      gap: 32px;
+      padding: 28px 0;
+      border-bottom: 1px solid var(--border);
+      align-items: start;
+    }
+
+    .phase:last-child { border-bottom: none; }
+
+    .phase-meta .phase-id {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .phase-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      border-radius: 100px;
+      border: 1px solid var(--border-strong);
+    }
+
+    .phase-status.done {
+      color: var(--success);
+      border-color: var(--success);
+    }
+    .phase-status.active {
+      color: var(--success);
+      border-color: var(--success);
+    }
+    .phase-status.next {
+      color: var(--accent);
+      border-color: var(--accent-dim);
+    }
+    .phase-status.queued { color: var(--text-dim); }
+
+    .phase-status .dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .phase-content h3 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .phase-content .phase-tagline {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+
+    .phase-tasks {
+      list-style: none;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 6px 24px;
+    }
+
+    .phase-tasks li {
+      font-size: 13px;
+      color: var(--text-muted);
+      padding-left: 18px;
+      position: relative;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .phase-tasks li::before {
+      content: '─';
+      position: absolute;
+      left: 0;
+      color: var(--text-dim);
+    }
+
+    .phase-tasks li.done {
+      color: var(--text);
+    }
+    .phase-tasks li.done::before {
+      content: '✓';
+      color: var(--success);
+    }
+
+    /* ── STACK ───────────────────────── */
+    .stack-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+    }
+
+    .stack-item {
+      background: var(--surface);
+      padding: 20px;
+    }
+
+    .stack-item .label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .stack-item .value {
+      font-size: 14px;
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    /* ── SECURITY HIGHLIGHT ──────────── */
+    .security-banner {
+      background: linear-gradient(180deg, rgba(74, 222, 128, 0.04) 0%, transparent 100%);
+      border: 1px solid var(--border);
+      border-left: 2px solid var(--success);
+      padding: 24px 28px;
+      margin-bottom: 32px;
+    }
+
+    .security-banner .label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--success);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .security-banner h3 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .security-banner p {
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .security-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+    }
+
+    .sec-item {
+      background: var(--surface);
+      padding: 18px 20px;
+    }
+
+    .sec-item .key {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 6px;
+    }
+
+    .sec-item .val {
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    /* ── ENDPOINTS ───────────────────── */
+    .endpoints {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+    }
+
+    .endpoint-row {
+      display: grid;
+      grid-template-columns: 80px 1fr 1fr;
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border);
+      gap: 16px;
+      align-items: center;
+    }
+
+    .endpoint-row:last-child { border-bottom: none; }
+
+    .endpoint-method {
+      font-weight: 600;
+      font-size: 11px;
+      text-align: center;
+      padding: 3px 0;
+      border-radius: 3px;
+    }
+
+    .endpoint-method.GET { background: rgba(110, 142, 255, 0.1); color: var(--accent); }
+    .endpoint-method.POST { background: rgba(74, 222, 128, 0.1); color: var(--success); }
+    .endpoint-method.DELETE { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
+    .endpoint-method.PATCH { background: rgba(251, 191, 36, 0.1); color: var(--warn); }
+
+    .endpoint-path { color: var(--text); }
+    .endpoint-desc { color: var(--text-muted); }
+
+    /* ── PROGRESS BAR ────────────────── */
+    .progress-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 24px 28px;
+      margin-bottom: 32px;
+    }
+
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+    }
+
+    .progress-label { color: var(--text-muted); }
+    .progress-pct { color: var(--success); font-weight: 600; }
+
+    .progress-track {
+      height: 4px;
+      background: var(--border);
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--success);
+      width: 12%;
+      transition: width 600ms ease;
+    }
+
+    .progress-meta {
+      display: flex;
+      gap: 24px;
+      margin-top: 16px;
+      font-size: 12px;
+      color: var(--text-dim);
+      font-family: 'JetBrains Mono', monospace;
+      flex-wrap: wrap;
+    }
+
+    .progress-meta strong { color: var(--text); font-weight: 500; }
+
+    /* ── FOOTER ──────────────────────── */
+    footer {
+      padding: 48px 0;
+      border-top: 1px solid var(--border);
+      color: var(--text-dim);
+      font-size: 13px;
+    }
+
+    footer .container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    footer a { color: var(--text-muted); text-decoration: none; }
+    footer a:hover { color: var(--text); }
+
+    /* ── RESPONSIVE ──────────────────── */
+    @media (max-width: 768px) {
+      .container { padding: 0 20px; }
+      .hero { padding: 64px 0 48px; }
+      section { padding: 56px 0; }
+      .nav-links { display: none; }
+      .phase { grid-template-columns: 1fr; gap: 12px; }
+      .endpoint-row { grid-template-columns: 60px 1fr; }
+      .endpoint-desc { grid-column: 2; font-size: 11px; }
+      .doc-row { grid-template-columns: 1fr; gap: 8px; }
+      .doc-status { text-align: left; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="container">
+      <div class="logo">
+        <span class="logo-mark">H</span>
+        <span>hermes-van</span>
+      </div>
+      <ul class="nav-links">
+        <li><a href="#overview">Overview</a></li>
+        <li><a href="#docs">Docs</a></li>
+        <li><a href="#security">Seguridad</a></li>
+        <li><a href="#architecture">Arquitectura</a></li>
+        <li><a href="#roadmap">Roadmap</a></li>
+        <li><a href="https://github.com/ivanxgb/hermes-van" target="_blank">GitHub ↗</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div class="container">
+      <div class="hero-pill">
+        <span class="dot"></span>
+        <span>v0.1.0 · self-hosted · passkeys · streaming · encrypted local state</span>
+      </div>
+      <h1>
+        Cliente web autenticado para Hermes Agent.<br>
+        <span class="accent">WebAuthn, multi-chat, slash commands, streaming.</span>
+      </h1>
+      <p class="lead">
+        Reemplazo de Telegram para operar Hermes en producción. Auth con passkeys
+        de salida, múltiples conversaciones simultáneas con SSE streaming
+        token-a-token, autocomplete de comandos, y compatibilidad total con la
+        API server nativa del gateway.
+      </p>
+
+      <div class="hero-meta">
+        <div class="meta-item">
+          <div class="label">Repositorio</div>
+          <div class="value">ivanxgb/hermes-van</div>
+        </div>
+        <div class="meta-item">
+          <div class="label">Visibilidad</div>
+          <div class="value">public</div>
+        </div>
+        <div class="meta-item">
+          <div class="label">Stack</div>
+          <div class="value">Hono + React</div>
+        </div>
+        <div class="meta-item">
+          <div class="label">Auth</div>
+          <div class="value">WebAuthn + recovery</div>
+        </div>
+        <div class="meta-item">
+          <div class="label">Despliegue</div>
+          <div class="value">hermes.example.com</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <section id="overview">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-tag">— Overview</div>
+        <h2>Por qué construir esto</h2>
+        <p class="section-subtitle">
+          Telegram resuelve push notifications móviles bien. No resuelve UX para sesiones paralelas,
+          historial navegable, ni interfaces especializadas para skills, cron y aprobaciones.
+        </p>
+      </div>
+
+      <div class="card-grid">
+        <div class="card">
+          <div class="card-icon">⌘</div>
+          <h3>Multi-chat real</h3>
+          <p>
+            Cada sesión es una pestaña independiente con su propio stream EventSource.
+            Cambiar de tab no corta los streams: siguen corriendo en background y avisan
+            cuando terminan.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">/</div>
+          <h3>Slash commands</h3>
+          <p>
+            Pulsar <span class="mono">/</span> abre un palette con todos los comandos
+            del registry de Hermes. Sourced en vivo desde
+            <span class="mono">/v1/capabilities</span> con fallback local sincronizado.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">⊕</div>
+          <h3>Auth de salida</h3>
+          <p>
+            WebAuthn con passkeys más recovery codes. Sin password que robar. Cookie
+            <span class="mono">HttpOnly</span> con <span class="mono">SameSite=Strict</span>,
+            CSRF double-submit, rate limiting y audit log.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">⟶</div>
+          <h3>Compatibilidad total</h3>
+          <p>
+            Cero modificaciones al backend. La webapp es 100% cliente del API server
+            existente. Si actualizas Hermes, sigue funcionando sin tocar código.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">▢</div>
+          <h3>Dark Enterprise</h3>
+          <p>
+            Lenguaje visual minimalista, denso en información,
+            tipografía mono para datos técnicos. Optimizado para sesiones largas
+            sin fatiga visual.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">⌨</div>
+          <h3>Keyboard-first</h3>
+          <p>
+            <span class="mono">⌘K</span> switcher de sesiones,
+            <span class="mono">⌘N</span> nueva,
+            <span class="mono">⌘↵</span> enviar,
+            <span class="mono">Esc</span> cancelar stream activo.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="docs">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-tag">— Documentación</div>
+        <h2>Plan antes de código</h2>
+        <p class="section-subtitle">
+          Antes de implementar, cada decisión queda escrita: amenazas, arquitectura,
+          roadmap, plan técnico por fase. La doc se mantiene viva con cada cambio.
+        </p>
+      </div>
+
+      <div class="docs-list">
+        <a class="doc-row" href="https://github.com/ivanxgb/hermes-van/blob/main/SECURITY.md" target="_blank">
+          <div class="doc-name">SECURITY.md</div>
+          <div class="doc-desc">Modelo de secretos, claves, despliegue seguro y reporte de vulnerabilidades.</div>
+          <div class="doc-status ready">v0.1</div>
+        </a>
+        <a class="doc-row" href="https://github.com/ivanxgb/hermes-van/blob/main/web/docs/RUNBOOK.md" target="_blank">
+          <div class="doc-name">web/docs/RUNBOOK.md</div>
+          <div class="doc-desc">Operación: deploy, rotación de claves, restore, revocación, audit.</div>
+          <div class="doc-status ready">v0.1</div>
+        </a>
+        <a class="doc-row" href="https://github.com/ivanxgb/hermes-van/blob/main/roadmap-v2.html" target="_blank">
+          <div class="doc-name">roadmap-v2.html</div>
+          <div class="doc-desc">Hitos definidos. Tracking de progreso. Fuente de verdad del estado.</div>
+          <div class="doc-status ready">live</div>
+        </a>
+        <a class="doc-row" href="https://github.com/ivanxgb/hermes-van/blob/main/web/docs/PENTEST.md" target="_blank">
+          <div class="doc-name">web/docs/PENTEST.md</div>
+          <div class="doc-desc">Checklist de validación para auth, CSRF, cookies, TLS, headers y resiliencia.</div>
+          <div class="doc-status ready">v0.1</div>
+        </a>
+        <a class="doc-row" href="https://github.com/ivanxgb/hermes-van/blob/main/deploy/README.md" target="_blank">
+          <div class="doc-name">deploy/README.md</div>
+          <div class="doc-desc">Nginx, systemd, Certbot, backups y restore para una instalación self-hosted.</div>
+          <div class="doc-status ready">ops</div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section id="security">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-tag">— Seguridad</div>
+        <h2>Hardening de salida</h2>
+        <p class="section-subtitle">
+          La app vive en el VPS detrás de TLS y autentica desde el primer despliegue.
+          La superficie expuesta a Internet es solo nginx. El gateway nunca sale de loopback.
+        </p>
+      </div>
+
+      <div class="security-banner">
+        <div class="label">— principio</div>
+        <h3>Defensa en profundidad. Confianza explícita en cada frontera.</h3>
+        <p>
+          Cada capa valida lo que recibe de la anterior. La API key del gateway nunca
+          llega al cliente. Las queries a SQLite siempre van scoped por <span class="mono">user_id</span>.
+          Los logs se redactan antes de escribir.
+        </p>
+      </div>
+
+      <div class="security-grid">
+        <div class="sec-item">
+          <div class="key">auth</div>
+          <div class="val">WebAuthn (passkeys) + recovery codes hasheados con Argon2id. UV required, counter validado.</div>
+        </div>
+        <div class="sec-item">
+          <div class="key">sesión</div>
+          <div class="val">Cookie HttpOnly · Secure · SameSite=Strict · 24h idle · 7d max · revocación inmediata.</div>
+        </div>
+        <div class="sec-item">
+          <div class="key">csrf</div>
+          <div class="val">Double-submit cookie con verificación en cada mutación.</div>
+        </div>
+        <div class="sec-item">
+          <div class="key">db</div>
+          <div class="val">SQLite con SQLCipher (clave separada de la app). Permisos 0600. Wrapper de scoping con tests.</div>
+        </div>
+        <div class="sec-item">
+          <div class="key">transporte</div>
+          <div class="val">TLS 1.3 only · HSTS preload · CSP estricto · COOP/COEP · headers completos.</div>
+        </div>
+        <div class="sec-item">
+          <div class="key">rate limit</div>
+          <div class="val">Login 5/15min/IP, recovery 3/h, lockout escalonado, alertas a Telegram.</div>
+        </div>
+        <div class="sec-item">
+          <div class="key">audit</div>
+          <div class="val">Tabla append-only. Eventos: login, logout, recovery, credential add/remove. Retención indefinida.</div>
+        </div>
+        <div class="sec-item">
+          <div class="key">supply chain</div>
+          <div class="val">pnpm con lockfile, post-install whitelist, audit en CI, deps mínimas y auditadas.</div>
+        </div>
+        <div class="sec-item">
+          <div class="key">secrets</div>
+          <div class="val">.env con permisos 0600, validación Zod al boot, redacción en logs vía Pino.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="architecture">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-tag">— Arquitectura</div>
+        <h2>Cómo se conecta al gateway</h2>
+        <p class="section-subtitle">
+          La webapp habla al API server vía loopback. Sin proxy intermedio,
+          sin estado server-side propio del chat, sin riesgo de drift de versiones.
+        </p>
+      </div>
+
+      <div class="arch-diagram">
+        <div class="arch-row">
+          <div class="arch-node client">
+            <div class="arch-stack">
+              <small>cliente</small>
+              <span>browser</span>
+            </div>
+          </div>
+          <div class="arch-arrow">→</div>
+          <div class="arch-node security">
+            <div class="arch-stack">
+              <small>tls + headers</small>
+              <span>nginx</span>
+            </div>
+          </div>
+          <div class="arch-arrow">→</div>
+          <div class="arch-node">
+            <div class="arch-stack">
+              <small>:3015 loopback</small>
+              <span>hermes-van</span>
+            </div>
+          </div>
+          <div class="arch-arrow">→</div>
+          <div class="arch-node">
+            <div class="arch-stack">
+              <small>:8765 loopback</small>
+              <span>hermes gateway</span>
+            </div>
+          </div>
+          <div class="arch-arrow">→</div>
+          <div class="arch-node">
+            <div class="arch-stack">
+              <small>llm</small>
+              <span>kiro / vertex</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top: 32px;">
+        <h3 style="font-size: 16px; margin-bottom: 16px; color: var(--text-muted);">
+          Endpoints consumidos del gateway
+        </h3>
+        <div class="endpoints">
+          <div class="endpoint-row"><span class="endpoint-method GET">GET</span><span class="endpoint-path">/api/sessions</span><span class="endpoint-desc">listado de chats</span></div>
+          <div class="endpoint-row"><span class="endpoint-method POST">POST</span><span class="endpoint-path">/api/sessions</span><span class="endpoint-desc">crear chat nuevo</span></div>
+          <div class="endpoint-row"><span class="endpoint-method PATCH">PATCH</span><span class="endpoint-path">/api/sessions/{id}</span><span class="endpoint-desc">renombrar / mover</span></div>
+          <div class="endpoint-row"><span class="endpoint-method DELETE">DEL</span><span class="endpoint-path">/api/sessions/{id}</span><span class="endpoint-desc">eliminar chat</span></div>
+          <div class="endpoint-row"><span class="endpoint-method GET">GET</span><span class="endpoint-path">/api/sessions/{id}/messages</span><span class="endpoint-desc">historial</span></div>
+          <div class="endpoint-row"><span class="endpoint-method POST">POST</span><span class="endpoint-path">/api/sessions/{id}/chat/stream</span><span class="endpoint-desc">SSE en tiempo real</span></div>
+          <div class="endpoint-row"><span class="endpoint-method POST">POST</span><span class="endpoint-path">/api/sessions/{id}/fork</span><span class="endpoint-desc">branch de sesión</span></div>
+          <div class="endpoint-row"><span class="endpoint-method GET">GET</span><span class="endpoint-path">/v1/capabilities</span><span class="endpoint-desc">comandos + features</span></div>
+          <div class="endpoint-row"><span class="endpoint-method GET">GET</span><span class="endpoint-path">/v1/skills</span><span class="endpoint-desc">skills disponibles</span></div>
+          <div class="endpoint-row"><span class="endpoint-method GET">GET</span><span class="endpoint-path">/v1/toolsets</span><span class="endpoint-desc">toolsets toggle</span></div>
+          <div class="endpoint-row"><span class="endpoint-method GET">GET</span><span class="endpoint-path">/v1/models</span><span class="endpoint-desc">modelos configurados</span></div>
+          <div class="endpoint-row"><span class="endpoint-method POST">POST</span><span class="endpoint-path">/v1/runs/{id}/approval</span><span class="endpoint-desc">aprobar comando peligroso</span></div>
+          <div class="endpoint-row"><span class="endpoint-method GET">GET</span><span class="endpoint-path">/api/jobs</span><span class="endpoint-desc">cron jobs</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="roadmap">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-tag">— Roadmap</div>
+        <h2>Plan de ejecución</h2>
+        <p class="section-subtitle">
+          Siete hitos. Cada uno con plan técnico previo. Cada uno entrega valor
+          utilizable antes de pasar al siguiente.
+        </p>
+      </div>
+
+      <div class="progress-card">
+        <div class="progress-header">
+          <span class="progress-label">— progreso global</span>
+          <span class="progress-pct">99%</span>
+        </div>
+        <div class="progress-track"><div class="progress-fill" style="width: 99%;"></div></div>
+        <div class="progress-meta">
+          <span><strong>4</strong> fases ✅ · <strong>Phase 5</strong> en marcha (9/10 sub-phases)</span>
+          <span>último: <strong>5.E — deploy real (bloqueado en DNS de hermes.example.com)</strong></span>
+        </div>
+      </div>
+
+      <div class="roadmap">
+
+        <div class="phase">
+          <div class="phase-meta">
+            <div class="phase-id">Phase 0</div>
+            <div class="phase-status done"><span class="dot"></span>completada</div>
+          </div>
+          <div class="phase-content">
+            <h3>Foundation</h3>
+            <p class="phase-tagline">Repositorio, doc visual, planeación completa antes de código.</p>
+            <ul class="phase-tasks">
+              <li class="done">Repo creado en GitHub</li>
+              <li class="done">Landing HTML + GitHub Pages</li>
+              <li class="done">Modelo de amenazas y arquitectura definidos</li>
+              <li class="done">Roadmap publicado</li>
+              <li class="done">Plan técnico Phase 1</li>
+              <li class="done">Pivot Next.js → Vite + Hono (TypeScript)</li>
+              <li class="done">Landing actualizada con stack final</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="phase">
+          <div class="phase-meta">
+            <div class="phase-id">Phase 1</div>
+            <div class="phase-status done"><span class="dot"></span>completada</div>
+          </div>
+          <div class="phase-content">
+            <h3>Security baseline + Auth + Skeleton</h3>
+            <p class="phase-tagline">Servidor mínimo con WebAuthn funcional. Hardening completo aplicado de salida. 54/54 tests verdes.</p>
+            <ul class="phase-tasks">
+              <li class="done">Scaffold Vite + React 19 + Hono + TS estricto</li>
+              <li class="done">Schema DB SQLCipher (users, credentials, sessions, audit, recovery, setup_tokens)</li>
+              <li class="done">Wrapper ScopedDb con tests de aislamiento cross-user</li>
+              <li class="done">Endpoints /auth/* (setup, login, recovery, logout, logout-all, me)</li>
+              <li class="done">Cliente WebAuthn + páginas /setup y /login con passkey + recovery tabs</li>
+              <li class="done">Middleware sesión + CSRF double-submit + rate limit + headers</li>
+              <li class="done">Recovery codes con Argon2id (10 codes Crockford-base32)</li>
+              <li class="done">Audit log emisión en 14 eventos auth</li>
+              <li class="done">Health check /api/health con probe del gateway</li>
+              <li class="done">Logger Pino con redacción de secretos</li>
+              <li class="done">deploy/nginx-hermes-van.conf con TLS 1.3 + HSTS + CSP</li>
+              <li class="done">Bootstrap script CLI con token one-time SHA-256</li>
+              <li class="done">Tests unitarios 54/54 (env, logger, scoped, recovery, session, ratelimit)</li>
+              <li class="done">Playwright e2e smoke (5 tests)</li>
+              <li class="done">docs/RUNBOOK.md (deploy, rotación, restore, incident response)</li>
+              <li class="done">docs/PENTEST.md (12 categorías de verificación manual)</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="phase">
+          <div class="phase-meta">
+            <div class="phase-id">Phase 2</div>
+            <div class="phase-status done"><span class="dot"></span>cerrada</div>
+          </div>
+          <div class="phase-content">
+            <h3>MVP — single chat funcional</h3>
+            <p class="phase-tagline">Una conversación con streaming via /v1/runs. Mensajes persistidos. Sidebar + composer.</p>
+            <ul class="phase-tasks">
+              <li class="done">Schema chats / messages / active_runs + scoped queries (cross-user isolation)</li>
+              <li class="done">Cliente del gateway: createRun / streamRunEvents / stopRun / resolveApproval</li>
+              <li class="done">REST CRUD: GET/POST/PATCH/DELETE /api/chats, GET /api/chats/:id/messages</li>
+              <li class="done">SSE proxy /api/runs/:id/events con upstream_run_id oculto al cliente</li>
+              <li class="done">Indirección ULID local → upstream_run_id (capability isolation)</li>
+              <li class="done">UI: sidebar con lista de chats + panel principal con composer</li>
+              <li class="done">Streaming token-a-token con stop button + Enter-to-send</li>
+              <li class="done">Optimistic rendering: user + assistant placeholder antes de SSE</li>
+              <li class="done">Persistencia de message status (streaming → completed/failed)</li>
+              <li class="done">e2e contra el gateway real con virtual WebAuthn (10/10 verdes)</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="phase">
+          <div class="phase-meta">
+            <div class="phase-id">Phase 3</div>
+            <div class="phase-status done"><span class="dot"></span>cerrada</div>
+          </div>
+          <div class="phase-content">
+            <h3>Multi-chat + slash commands</h3>
+            <p class="phase-tagline">Streams paralelos, command palette, markdown, reconexión, badges.</p>
+            <ul class="phase-tasks">
+              <li class="done">Multi-chat store (useSyncExternalStore) — streams sobreviven cambio de tab</li>
+              <li class="done">Live dot animado en sidebar para chats streamando en background</li>
+              <li class="done">Command palette ⌘K con fuzzy search + slash commands (/new, /help, …)</li>
+              <li class="done">Atajo ⌘N nueva sesión + Esc cancela stream</li>
+              <li class="done">Render markdown con marked + DOMPurify (h1, code, tablas, links)</li>
+              <li class="done">Reconexión automática a runs vivos al recargar (/api/chats/:id/active-run)</li>
+              <li class="done">Unread badges + document title con contador global</li>
+              <li class="done">Hardening de tests: globalSetup limpia DB + rate limits relajados off-prod</li>
+              <li class="done">Suite e2e: 16/16 verdes (auth, REST, SSE, multi-chat, palette, markdown, reconnect, unread)</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="phase">
+          <div class="phase-meta">
+            <div class="phase-id">Phase 4</div>
+            <div class="phase-status done"><span class="dot"></span>cerrada</div>
+          </div>
+          <div class="phase-content">
+            <h3>Power features</h3>
+            <p class="phase-tagline">Approval inline, search FTS5, export markdown, capabilities browser, jobs viewer, fork de chat. 25/25 e2e verdes.</p>
+            <ul class="phase-tasks">
+              <li class="done">Approval flow inline — callout con comando + once/session/always/deny</li>
+              <li class="done">Search FTS5 sobre messages — tabla virtual + scoping por chatId + snippets</li>
+              <li class="done">Export sesión a markdown con metadata + filename slugificado</li>
+              <li class="done">Capabilities browser — /v1/skills + /v1/toolsets read-only (100 skills, 26 toolsets)</li>
+              <li class="done">Jobs viewer — /api/jobs con schedule, next/last run, status, toolsets</li>
+              <li class="done">Fork de chat con un click — /api/sessions/:id/fork + chat local nuevo</li>
+              <li class="done">Proxy server-side: la gateway key nunca llega al browser</li>
+              <li class="done">Slash commands: /capabilities, /jobs, /fork integrados en ⌘K</li>
+              <li class="done">Switch de modelo descartado (gateway expone solo "Hermes Agent")</li>
+              <li class="done">Suite e2e: 25/25 verdes en 1.6m (auth + REST + SSE + multi-chat + palette + reconnect + unread + approval + search + export + capabilities + jobs + fork)</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="phase">
+          <div class="phase-meta">
+            <div class="phase-id">Phase 5</div>
+            <div class="phase-status active"><span class="dot"></span>en marcha</div>
+          </div>
+          <div class="phase-content">
+            <h3>Polish + producción</h3>
+            <p class="phase-tagline">Mobile UX, security panel, backups, web push, deploy en hermes.example.com con TLS y monitoring. 35/35 e2e green tras 5.D.1.</p>
+            <ul class="phase-tasks">
+              <li class="done">5.A — Mobile drawer + shortcuts overlay (?, ⌘/, Esc layered)</li>
+              <li class="done">5.A — iOS no-zoom composer + 40px touch targets + ellipsis title</li>
+              <li class="done">5.B — /auth/sessions list con isCurrent flag</li>
+              <li class="done">5.B — /auth/sessions/:id/revoke per-session (cookies clear si es current)</li>
+              <li class="done">5.B — /auth/audit?limit=N con metadata JSON-parsed</li>
+              <li class="done">5.B — Settings page rewrite: sessions panel + audit log</li>
+              <li class="done">5.C — Backups encriptados (sqlcipher checkpoint+copy) con round-trip + integrity_check</li>
+              <li class="done">5.C — Test pnpm vitest: 64/64 unit (incluye verifica que key incorrecta falla)</li>
+              <li class="done">5.D.1 — Web Push backend (VAPID): public-key, subscribe, unsubscribe, test</li>
+              <li class="done">5.D.1 — push_subscriptions scoped per-user + cascade delete + 410-removal dispatch</li>
+              <li class="done">5.D.1 — service worker (sw.js) + Settings UI con enable/test/disable</li>
+              <li class="done">5.D.1 — pnpm hermes-van:vapid keypair generator + 11 unit + 4 e2e tests (75/75 + 35/35)</li>
+              <li class="done">5.D.2 — src/server/main.ts production entry (Hono via @hono/node-server)</li>
+              <li class="done">5.D.2 — deploy/nginx/hermes-van.conf TLS + HSTS + SSE pass-through + /sw.js cache headers</li>
+              <li class="done">5.D.2 — deploy/systemd/hermes-van.service user-scope con resource limits + hardening</li>
+              <li class="done">5.D.2 — deploy/scripts/certbot.sh issuer+renewer idempotente vía http-01</li>
+              <li class="done">5.F — pentest interno (13 tests): cookies, headers, CSRF, isolation, traversal, SQLi, anon probes, secret leakage, /sw.js, ratelimit</li>
+              <li class="done">5.G — webhook alerts on security incidents (Slack/Discord/Telegram/Hermes-compatible) + 9 unit tests</li>
+              <li class="done">5.H — CI workflow (lint-typecheck + vitest + playwright) en deploy/ci/, activable cuando PAT tenga workflow scope</li>
+              <li class="done">5.H — fix prod /sw.js + /favicon.ico + SPA fallback servidos vía @hono/node-server/serve-static</li>
+              <li class="done">5.I — backup retention configurable (HERMES_VAN_BACKUP_RETENTION, default 14) + naming-safe pruning</li>
+              <li class="done">5.I — pnpm hermes-van:restore con preflights (key match + integrity_check), pre-restore snapshot, rename atómico, sidecars limpiados</li>
+              <li class="done">5.I — 6 unit tests workspace-aislados (retention/naming/--output/round-trip/snapshot/key-mismatch) + systemd timer template diario en deploy/README.md</li>
+              <li>5.E — deploy real en hermes.example.com (bloqueado en DNS)</li>
+              <li>HSTS preload submission (post-deploy)</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="phase">
+          <div class="phase-meta">
+            <div class="phase-id">Phase 6</div>
+            <div class="phase-status active"><span class="dot"></span>en marcha</div>
+          </div>
+          <div class="phase-content">
+            <h3>Más allá del MVP</h3>
+            <p class="phase-tagline">Capacidades avanzadas que dependen de validar el core primero.</p>
+            <ul class="phase-tasks">
+              <li class="done">6.A — PWA / offline shell (manifest standalone + service worker con runtime caching: network-first navigations, SWR para /assets/*, never-cache para /api · /auth · /v1 · SSE)</li>
+              <li class="done">6.A — Apple PWA meta + theme-color + icon.svg maskable + registro condicional en prod (HMR intacto en dev)</li>
+              <li class="done">6.B — Theme system (Dark Enterprise / Hermes Green / OLED Pure / Solarized Dark) con CSS variables + picker en Settings + 14 unit tests</li>
+              <li class="done">6.B — bootTheme() sincrónico pre-React (sin FOUC) + meta theme-color sincronizado + storage tolerante a private mode</li>
+              <li class="done">6.C — Voice input (Web Speech API) en composer con append inteligente + active state pulse + hidden en browsers sin soporte</li>
+              <li class="done">6.C — 11 unit tests bajo jsdom + MockSpeechRecognition (lifecycle, interim/final, errors, disabled, unmount cleanup)</li>
+              <li class="done">6.D.1 — File upload backend (MEDIA: protocol): tabla attachments + content-addressed store con dedup por sha256 + 25MB cap + mime denylist + GC refcount</li>
+              <li class="done">6.D.1 — REST surface POST/GET/DELETE /api/uploads con CSRF + Content-Disposition: attachment + nosniff + 17 unit + 6 e2e</li>
+              <li class="done">6.D.2 — Paperclip composer button: image/* → markdown image, otros → link; escape de markdown specials; auto-reset del input + 6 unit tests</li>
+              <li class="done">6.E — Diff / patch view en mensajes (```diff y ```patch fences) con clasificador unified-diff puro + 13 unit tests</li>
+              <li class="done">6.E — CSS tematizado: add/remove/hunk/meta/context con border-left por kind; hunk usa --accent así que tema activo se refleja en los diffs</li>
+              <li class="done">6.F — Search palette FTS5 (Cmd/Ctrl+Shift+F): debounce 200ms sobre /api/chats/_search, ranked snippets con [[…]] → &lt;mark&gt;, keyboard nav, idle/loading/error/empty states</li>
+              <li class="done">6.F — Backend ya existía (FTS5 virtual table + triggers AFTER INSERT/DELETE/UPDATE); frontend wiring + jump-to-message con poll-DOM (race con chat-store) + msg-flash keyframe + 10 unit + 1 e2e</li>
+              <li class="done">6.G — Dashboard /metrics: catálogo de precios LLM (Anthropic/OpenAI/Mistral/DeepSeek/Llama) + summarizeUsage agregando totals/by-model/by-chat/last-30d</li>
+              <li class="done">6.G — UI con KPIs + bars CSS (sin chart lib); priceless-warning cuando hay modelos fuera del catálogo + 12 unit + 3 e2e</li>
+              <li class="done">perf — Lazy routes (Setup/Settings/Metrics/Capabilities/Jobs) + manualChunks vendor split: bundle principal 586KB → 429KB (-27%); warning de Vite eliminado</li>
+              <li class="done">/model — Slash command para cambiar modelo por chat: PATCH /api/chats/:id con scoped.setModel + 2 isolation tests; UX mínima (free-form prompt) refleja que el gateway no expone /v1/models</li>
+              <li class="done">copy-button — Botón hover-revealed por mensaje completed: dual-path (Clipboard API + textarea fallback para http://); transient "copied" / "failed" 1.2s + 4 unit tests</li>
+              <li class="done">scroll-anchor — Smart auto-scroll: IntersectionObserver watch sobre sentinel; deltas streaming ya no rompen la posición del usuario; botón flotante "↓ latest" cuando scrolledFar (>2vh) + 6 unit tests</li>
+              <li class="done">token-estimate — Hint en composer (≈N tokens / ≈N.Nk tokens) con heurística chars/4 + CJK fallback; sin dependencias (gpt-tokenizer pesa 2MB); 7 unit tests</li>
+              <li>Visualización del kanban orchestrator (requiere endpoints en gateway)</li>
+              <li>Integración multi-perfil</li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <section id="stack">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-tag">— Stack</div>
+        <h2>Tecnologías</h2>
+        <p class="section-subtitle">
+          Stack moderno, type-safe end-to-end, sin lock-in. Dependencias mínimas
+          y auditadas. Justificación de elecciones en
+          <a href="https://github.com/ivanxgb/hermes-van/blob/main/README.md" style="color: var(--accent);" target="_blank">README.md</a>.
+        </p>
+      </div>
+
+      <div class="stack-grid">
+        <div class="stack-item"><div class="label">server</div><div class="value">Hono</div></div>
+        <div class="stack-item"><div class="label">client</div><div class="value">React 19</div></div>
+        <div class="stack-item"><div class="label">routing</div><div class="value">Wouter</div></div>
+        <div class="stack-item"><div class="label">build</div><div class="value">Vite</div></div>
+        <div class="stack-item"><div class="label">runtime</div><div class="value">Node 22 LTS</div></div>
+        <div class="stack-item"><div class="label">lenguaje</div><div class="value">TypeScript</div></div>
+        <div class="stack-item"><div class="label">estilos</div><div class="value">CSS custom</div></div>
+        <div class="stack-item"><div class="label">sanitización</div><div class="value">DOMPurify</div></div>
+        <div class="stack-item"><div class="label">IDs</div><div class="value">ULID</div></div>
+        <div class="stack-item"><div class="label">db</div><div class="value">SQLite + SQLCipher</div></div>
+        <div class="stack-item"><div class="label">orm</div><div class="value">Drizzle</div></div>
+        <div class="stack-item"><div class="label">webauthn</div><div class="value">@simplewebauthn</div></div>
+        <div class="stack-item"><div class="label">hashing</div><div class="value">Argon2id</div></div>
+        <div class="stack-item"><div class="label">validación</div><div class="value">Zod</div></div>
+        <div class="stack-item"><div class="label">logging</div><div class="value">Pino</div></div>
+        <div class="stack-item"><div class="label">streaming</div><div class="value">SSE nativo</div></div>
+        <div class="stack-item"><div class="label">markdown</div><div class="value">marked + DOMPurify</div></div>
+        <div class="stack-item"><div class="label">testing</div><div class="value">Vitest + Playwright</div></div>
+        <div class="stack-item"><div class="label">deploy</div><div class="value">VPS · nginx · systemd</div></div>
+        <div class="stack-item"><div class="label">tls</div><div class="value">Certbot</div></div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      <div>
+        <span class="mono">hermes-van</span> · construido sobre <a href="https://github.com/NousResearch/Hermes-Agent" target="_blank">Hermes Agent</a>
+      </div>
+      <div>
+        <a href="https://github.com/ivanxgb/hermes-van" target="_blank">repositorio</a> ·
+        <a href="https://github.com/ivanxgb/hermes-van/blob/main/SECURITY.md" target="_blank">security</a> ·
+        <a href="https://github.com/ivanxgb/hermes-van/blob/main/roadmap-v2.html" target="_blank">roadmap</a> ·
+        <a href="https://hermes-agent.nousresearch.com/docs" target="_blank">docs hermes</a>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>

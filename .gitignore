@@ -1,0 +1,28 @@
+node_modules/
+.DS_Store
+.env
+.env*.local
+*.log
+.vscode/
+.idea/
+
+# build artifacts
+dist/
+.vinxi/
+.output/
+
+# data
+data/
+backups/
+web/backups/
+*.db
+*.db-wal
+*.db-shm
+
+# coverage
+coverage/
+
+# playwright
+test-results/
+playwright-report/
+.playwright/
